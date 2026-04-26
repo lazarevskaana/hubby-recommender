@@ -77,7 +77,7 @@ source .venv/bin/activate        # Linux / macOS
 docker compose up -d
 
 # 3. Start the API server
-uvicorn main:app --reload
+uvicorn app.main:app --reload
 ```
 
 The API will be available at: **http://localhost:8000**  
