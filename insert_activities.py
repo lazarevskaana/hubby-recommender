@@ -18,6 +18,7 @@ PREREQUISITES:
 """
 
 import json
+import math
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -35,15 +36,46 @@ INPUT_PATH = "data/cleaned_activities.csv"
 # HELPERS
 # -------------------------------------------------------------------
 
+def nan_to_none(value):
+    """Convert pandas NaN/float NaN to None, leave everything else as-is."""
+    if value is None:
+        return None
+    try:
+        if math.isnan(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    return value
+
+
+def parse_working_hours(value):
+    """
+    Parse the working_hours JSON string back into a Python dict.
+    Returns None if the value is missing or not a valid string.
+    """
+    if value is None:
+        return None
+    try:
+        if math.isnan(value):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (json.JSONDecodeError, ValueError):
+            return None
+    return None
+
+
 def load_cleaned_data(path: str) -> pd.DataFrame:
     """
     Load the cleaned CSV. The 'working_hours' column was saved as a
     JSON string — parse it back into a Python dict here.
     """
-    # TODO: implement
-    # Hint: pd.read_csv(path), then df["working_hours"] = df["working_hours"].apply(...)
-    # Be careful: missing/null working_hours should stay None, not crash json.loads
-    pass
+    df = pd.read_csv(path)
+    df["working_hours"] = df["working_hours"].apply(parse_working_hours)
+    return df
 
 
 def row_to_activity_dict(row: pd.Series) -> dict:
@@ -51,21 +83,17 @@ def row_to_activity_dict(row: pd.Series) -> dict:
     Convert a pandas row into a dict that matches the Activity model.
     This dict will be passed to bulk_insert_mappings.
     """
-    # TODO: implement
-    # Return something like:
-    # {
-    #     "name": row["name"],
-    #     "type": row["type"],
-    #     "subtype": row["subtype"],
-    #     "phone_number": row["phone_number"],
-    #     "rating": row["rating"],
-    #     "user_rating_count": row["user_rating_count"],
-    #     "latitude": row["latitude"],
-    #     "longitude": row["longitude"],
-    #     "working_hours": row["working_hours"],
-    # }
-    # Watch out for NaN values from pandas — convert them to None.
-    pass
+    return {
+        "name":              nan_to_none(row["name"]),
+        "type":              nan_to_none(row["type"]),
+        "subtype":           nan_to_none(row["subtype"]),
+        "phone_number":      nan_to_none(row["phone_number"]),
+        "rating":            nan_to_none(row["rating"]),
+        "user_rating_count": int(nan_to_none(row["user_rating_count"]) or 0),
+        "latitude":          nan_to_none(row["latitude"]),
+        "longitude":         nan_to_none(row["longitude"]),
+        "working_hours":     row["working_hours"],  # already None or dict
+    }
 
 
 # -------------------------------------------------------------------
@@ -85,8 +113,6 @@ def main():
     inserted = 0
     skipped = 0
     try:
-        # Bulk insert is much faster than adding one row at a time.
-        # If you prefer, you can also loop with session.add() and session.commit().
         session.bulk_insert_mappings(Activity, activity_dicts)
         session.commit()
         inserted = len(activity_dicts)
