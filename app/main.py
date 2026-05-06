@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from app.database import engine, Base
 import app.models
 
-# Create all tables on startup if they don't exist yet
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Hubby API")
