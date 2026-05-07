@@ -1,18 +1,3 @@
-"""
-verify_data.py
-
-Sanity-check the data in PostgreSQL after running the insert scripts.
-Prints counts, distributions, and spot-checks a few rows.
-
-Run with:
-    python verify_data.py
-
-PREREQUISITES:
-    - Docker container running
-    - Activities and users have been inserted
-
-"""
-
 from sqlalchemy import func
 
 from app.database import SessionLocal
@@ -20,13 +5,6 @@ from app.models import Activity, User
 
 
 def verify_activities(session) -> None:
-    """
-    Print activity-related stats:
-    - Total count
-    - Distribution by type
-    - How many have null working_hours
-    - A few sample rows
-    """
     total = session.query(Activity).count()
     print(f"  Total activities: {total}")
 
@@ -51,12 +29,6 @@ def verify_activities(session) -> None:
 
 
 def verify_users(session) -> None:
-    """
-    Print user-related stats:
-    - Total count
-    - Distribution by destination
-    - A few sample rows
-    """
     total = session.query(User).count()
     print(f"  Total users: {total}")
 

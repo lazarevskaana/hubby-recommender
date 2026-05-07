@@ -1,31 +1,10 @@
-"""
-insert_users.py
 
-Reads the dummy users CSV and inserts the rows into PostgreSQL.
-
-INPUT:  data/dummy_users.csv (produced by generate_dummy_users.py)
-OUTPUT: rows in the 'users' table
-
-Run with:
-    python insert_users.py
-
-PREREQUISITES:
-    - Docker container running
-    - Tables exist (python drop_and_recreate_tables.py)
-    - Dummy users CSV exists (python generate_dummy_users.py)
-
-
-"""
 
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.database import SessionLocal
 from app.models import User
-
-# -------------------------------------------------------------------
-# CONFIGURATION
-# -------------------------------------------------------------------
 
 INPUT_PATH = "data/dummy_users.csv"
 
@@ -35,19 +14,12 @@ INPUT_PATH = "data/dummy_users.csv"
 # -------------------------------------------------------------------
 
 def load_users(path: str) -> pd.DataFrame:
-    """
-    Load the dummy users CSV.
-    """
     df = pd.read_csv(path)
     df = df.where(pd.notnull(df), None)
     return df
 
 
 def row_to_user_dict(row: pd.Series) -> dict:
-    """
-    Convert a pandas row into a dict matching the User model.
-    Handle NaN -> None where appropriate.
-    """
     return {
         "name": row["name"] if pd.notnull(row["name"]) else None,
         "surname": row["surname"] if pd.notnull(row["surname"]) else None,

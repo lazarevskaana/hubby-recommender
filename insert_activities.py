@@ -1,26 +1,9 @@
-"""
-insert_activities.py
-
-Reads the cleaned activities CSV and inserts the rows into PostgreSQL
-using SQLAlchemy.
-
-INPUT:  data/cleaned_activities.csv (produced by preprocess_activities_tsv.py)
-OUTPUT: rows in the 'activities' table in PostgreSQL
-
-Run with:
-    python insert_activities.py
-
-PREREQUISITES:
-    - Docker container running (docker compose up -d)
-    - Tables exist (python drop_and_recreate_tables.py)
-    - Cleaned CSV exists (python preprocess_activities_tsv.py)
-
-"""
 
 import json
 import math
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
+import contextlib
 
 from app.database import SessionLocal
 from app.models import Activity
@@ -31,13 +14,13 @@ from app.models import Activity
 
 INPUT_PATH = "data/cleaned_activities.csv"
 
-
+ 
 # -------------------------------------------------------------------
 # HELPERS
 # -------------------------------------------------------------------
 
 def nan_to_none(value):
-    """Convert pandas NaN/float NaN to None, leave everything else as-is."""
+   
     if value is None:
         return None
     try:
@@ -49,10 +32,6 @@ def nan_to_none(value):
 
 
 def parse_working_hours(value):
-    """
-    Parse the working_hours JSON string back into a Python dict.
-    Returns None if the value is missing or not a valid string.
-    """
     if value is None:
         return None
     try:
@@ -69,20 +48,12 @@ def parse_working_hours(value):
 
 
 def load_cleaned_data(path: str) -> pd.DataFrame:
-    """
-    Load the cleaned CSV. The 'working_hours' column was saved as a
-    JSON string — parse it back into a Python dict here.
-    """
     df = pd.read_csv(path)
     df["working_hours"] = df["working_hours"].apply(parse_working_hours)
     return df
 
 
 def row_to_activity_dict(row: pd.Series) -> dict:
-    """
-    Convert a pandas row into a dict that matches the Activity model.
-    This dict will be passed to bulk_insert_mappings.
-    """
     return {
         "name":              nan_to_none(row["name"]),
         "type":              nan_to_none(row["type"]),

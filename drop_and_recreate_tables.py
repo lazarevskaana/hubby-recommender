@@ -1,5 +1,5 @@
 from app.database import engine, Base
-import app.models  # critical: registers User and Activity with Base
+import app.models 
 
 
 def main():
