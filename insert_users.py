@@ -38,8 +38,9 @@ def load_users(path: str) -> pd.DataFrame:
     """
     Load the dummy users CSV.
     """
-    # TODO: implement
-    pass
+    df = pd.read_csv(path)
+    df = df.where(pd.notnull(df), None)
+    return df
 
 
 def row_to_user_dict(row: pd.Series) -> dict:
@@ -47,8 +48,14 @@ def row_to_user_dict(row: pd.Series) -> dict:
     Convert a pandas row into a dict matching the User model.
     Handle NaN -> None where appropriate.
     """
-    # TODO: implement
-    pass
+    return {
+        "name": row["name"] if pd.notnull(row["name"]) else None,
+        "surname": row["surname"] if pd.notnull(row["surname"]) else None,
+        "email": row["email"] if pd.notnull(row["email"]) else None,
+        "destination": row["destination"] if pd.notnull(row["destination"]) else None,
+        "latitude": row["latitude"] if pd.notnull(row["latitude"]) else None,
+        "longitude": row["longitude"] if pd.notnull(row["longitude"]) else None,
+    }
 
 
 # -------------------------------------------------------------------

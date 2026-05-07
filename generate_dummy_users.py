@@ -19,6 +19,33 @@ PREREQUISITES:
 import random
 import pandas as pd
 from faker import Faker
+from faker.providers import BaseProvider
+import random
+import itertools
+
+
+
+
+# Custom Macedonian provider
+class MacedonianProvider(BaseProvider):
+    male_names = ["Petar", "Aleksandar", "Kristijan", "Stefan", "Nikola", "Filip", "David", "Mihail", "Goran"]
+    female_names = ["Angela", "Ana", "Elena", "Marija", "Ivana", "Simona", "Sara", "Katerina", "Tamara", "Jovana"]
+
+    male_surnames = ["Gjorgievski", "Petrovski", "Ristovski", "Stojanov", "Nikoloski", "Kostadinov", "Todorovski", "Spasov", "Kolevski", "Zafirovski", "Velkovski"]
+    female_surnames = ["Gjorgievska", "Petrovska", "Ristovska", "Trajkovska", "Ilievska", "Ristovska", "Micevska", "Angelovska", "Bozinovska", "Krstevska", "Mitrevska"]
+
+    def name_and_surname(self):
+        if random.choice([True, False]):  # машко
+            name = self.random_element(self.male_names)
+            surname = self.random_element(self.male_surnames)
+        else:  # женско
+            name = self.random_element(self.female_names)
+            surname = self.random_element(self.female_surnames)
+        return name, surname
+    
+
+# Faker со mk_MK (и custom provider за имиња)
+
 
 # -------------------------------------------------------------------
 # CONFIGURATION
@@ -34,8 +61,14 @@ DESTINATION = "Skopje"
 COORD_OFFSET_RANGE = 0.005
 
 # Use Macedonian locale for realistic names matching the destination.
-fake = Faker("mk_MK")
-random.seed(42)  # reproducible results — same users every run
+
+try:
+    fake = Faker("mk_MK")
+except AttributeError:
+    fake = Faker()
+    fake.add_provider(MacedonianProvider)
+
+random.seed(42)  # reproducible results
 
 
 # -------------------------------------------------------------------
@@ -48,7 +81,9 @@ def load_activity_coordinates(path: str) -> list[tuple[float, float]]:
     These are used as anchor points for placing dummy users nearby.
     """
     # TODO: implement
-    pass
+    df = pd.read_csv(path)
+    coords = list(zip(df["latitude"], df["longitude"]))
+    return coords
 
 
 def generate_unique_email(name: str, surname: str, used: set) -> str:
@@ -57,7 +92,14 @@ def generate_unique_email(name: str, surname: str, used: set) -> str:
     add digits until unique. Add the result to 'used' before returning.
     """
     # TODO: implement
-    pass
+    base = f"{name.lower()}.{surname.lower()}@example.com"
+    email = base
+    counter = 1
+    while email in used:
+        email = f"{name.lower()}.{surname.lower()}{counter}@example.com"
+        counter += 1
+    used.add(email)
+    return email
 
 
 def generate_user(activity_coords: list, used_emails: set) -> dict:
@@ -69,7 +111,24 @@ def generate_user(activity_coords: list, used_emails: set) -> dict:
         - latitude, longitude — pick a random activity, add small offset
     """
     # TODO: implement
-    pass
+    provider = MacedonianProvider(fake)
+    name, surname = provider.name_and_surname()
+    email = generate_unique_email(name, surname, used_emails)
+
+
+    # Pick a random activity coordinate
+    lat, lng = random.choice(activity_coords)
+    lat += random.uniform(-COORD_OFFSET_RANGE, COORD_OFFSET_RANGE)
+    lng += random.uniform(-COORD_OFFSET_RANGE, COORD_OFFSET_RANGE)
+
+    return {
+        "name": name,
+        "surname": surname,
+        "email": email,
+        "destination": DESTINATION,
+        "latitude": lat,
+        "longitude": lng,
+    }
 
 
 # -------------------------------------------------------------------
@@ -83,7 +142,27 @@ def main():
 
     print(f"Generating {NUM_USERS} dummy users...")
     used_emails = set()
-    users = [generate_user(activity_coords, used_emails) for _ in range(NUM_USERS)]
+    # users = [generate_user(activity_coords, used_emails) for _ in range(NUM_USERS)]
+    all_combos = list(itertools.product(MacedonianProvider.male_names, MacedonianProvider.male_surnames)) + \
+             list(itertools.product(MacedonianProvider.female_names, MacedonianProvider.female_surnames))
+
+    random.shuffle(all_combos)
+    selected_combos = all_combos[:NUM_USERS]
+
+    users = []
+    for name, surname in selected_combos:
+        email = generate_unique_email(name, surname, used_emails)
+        lat, lng = random.choice(activity_coords)
+        lat += random.uniform(-COORD_OFFSET_RANGE, COORD_OFFSET_RANGE)
+        lng += random.uniform(-COORD_OFFSET_RANGE, COORD_OFFSET_RANGE)
+        users.append({
+            "name": name,
+            "surname": surname,
+            "email": email,
+            "destination": DESTINATION,
+            "latitude": lat,
+            "longitude": lng,
+    })
 
     print(f"Writing output to {OUTPUT_PATH}...")
     df = pd.DataFrame(users)
