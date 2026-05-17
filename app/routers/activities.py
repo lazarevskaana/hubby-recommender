@@ -19,6 +19,7 @@ Author: [Person 3 fills in]
 Week 4
 """
 
+from datetime import datetime, time
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 
@@ -37,24 +38,33 @@ router = APIRouter(prefix="/activities", tags=["activities"])
 def get_activities(
     db: Session = Depends(get_db),
     limit: int = Query(20, ge=1, le=100),
-    category: str | None = Query(None),
+    category: str | None = Query(None),          # maps to Activity.type
     min_rating: float | None = Query(None),
-    min_rating_count: int | None = Query(None),
+    min_rating_count: int | None = Query(None),  # maps to Activity.user_rating_count
     open_now: bool = Query(False),
 ):
     """
     Return a list of activities, filtered by the query parameters.
-
-    Implementation notes:
-    - Start with db.query(Activity)
-    - Exclude soft-deleted rows: filter Activity.deleted_at.is_(None)
-    - Apply each filter only if the parameter was provided
-    - 'open_now': check the current weekday + time against the
-      working_hours JSON. Helper function suggested below.
-    - Apply .limit(limit) last
     """
-    # TODO: implement
-    pass
+    query = db.query(Activity).filter(Activity.deleted_at.is_(None))
+
+    if category is not None:
+        query = query.filter(Activity.type == category)
+
+    if min_rating is not None:
+        query = query.filter(Activity.rating >= min_rating)
+
+    if min_rating_count is not None:
+        query = query.filter(Activity.user_rating_count >= min_rating_count)
+
+    activities = query.limit(limit).all()
+
+    # open_now can't be pushed to SQL — working_hours is a JSON column,
+    # so we evaluate it in Python after fetching.
+    if open_now:
+        activities = [a for a in activities if is_open_now(a.working_hours)]
+
+    return activities
 
 
 # -------------------------------------------------------------------
@@ -68,12 +78,12 @@ def create_activity(
 ):
     """
     Create a new activity from the request body.
-    - Build an Activity object from the payload
-    - add, commit, refresh
-    - return the created activity
     """
-    # TODO: implement
-    pass
+    activity = Activity(**payload.model_dump())
+    db.add(activity)
+    db.commit()
+    db.refresh(activity)
+    return activity
 
 
 # -------------------------------------------------------------------
@@ -88,18 +98,34 @@ def update_activity(
 ):
     """
     Update an existing activity.
-    - Look up the activity by id
-    - If not found, raise HTTPException(status_code=404, detail="...")
-    - Apply only the fields that were provided in the payload
-    - commit, refresh, return
     """
-    # TODO: implement
-    pass
+    activity = (
+        db.query(Activity)
+        .filter(Activity.id == activity_id, Activity.deleted_at.is_(None))
+        .first()
+    )
+
+    if activity is None:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(activity, field, value)
+
+    db.commit()
+    db.refresh(activity)
+    return activity
 
 
 # -------------------------------------------------------------------
 # HELPER
 # -------------------------------------------------------------------
+
+# Monday=0 … Sunday=6, matching Python's datetime.weekday()
+_DAY_NAMES = [
+    "monday", "tuesday", "wednesday", "thursday",
+    "friday", "saturday", "sunday",
+]
+
 
 def is_open_now(working_hours: dict | None) -> bool:
     """
@@ -111,7 +137,38 @@ def is_open_now(working_hours: dict | None) -> bool:
 
     - None or missing day  -> treat as closed (return False)
     - empty list []        -> closed that day
-    - check current time falls within any interval
+    - checks current time against every interval for today
+    - handles overnight slots where close < open  (e.g. 22:00 – 02:00)
     """
-    # TODO: implement
-    pass
+    if not working_hours:
+        return False
+
+    today = _DAY_NAMES[datetime.now().weekday()]
+    slots = working_hours.get(today)
+
+    if not slots:           # key missing or empty list -> closed
+        return False
+
+    now_t = datetime.now().time().replace(second=0, microsecond=0)
+
+    for slot in slots:
+        try:
+            open_h,  open_m  = map(int, slot["open"].split(":"))
+            close_h, close_m = map(int, slot["close"].split(":"))
+        except (KeyError, ValueError):
+            continue        # malformed slot — skip rather than crash
+
+        open_t  = time(open_h,  open_m)
+        close_t = time(close_h, close_m)
+
+        if open_t <= close_t:
+            # Normal slot  e.g. 09:00 – 23:00
+            if open_t <= now_t < close_t:
+                return True
+        else:
+            # Overnight slot  e.g. 22:00 – 02:00
+            # Open if:  now >= 22:00  OR  now < 02:00
+            if now_t >= open_t or now_t < close_t:
+                return True
+
+    return False
