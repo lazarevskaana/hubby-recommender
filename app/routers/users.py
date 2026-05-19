@@ -19,6 +19,8 @@ Author: [Person 4 fills in]
 Week 4
 """
 
+import math
+
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 
@@ -54,8 +56,17 @@ def get_users(
       (e.g. ignore the geo filter, or raise a 400). Document your choice.
     - Apply limit
     """
-    # TODO: implement
-    pass
+    query = db.query(User).filter(User.deleted_at.is_(None))
+
+    if latitude is not None and longitude is not None and radius_km is not None:
+        all_users = query.all()
+        nearby = [
+            u for u in all_users
+            if haversine_km(latitude, longitude, u.latitude, u.longitude) <= radius_km
+        ]
+        return nearby[:limit]
+
+    return query.limit(limit).all()
 
 
 # -------------------------------------------------------------------
@@ -74,8 +85,15 @@ def create_user(
       is unique) — catch the error and return a 409 Conflict
     - add, commit, refresh, return
     """
-    # TODO: implement
-    pass
+    existing = db.query(User).filter(User.email == payload.email).first()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already registered")
+
+    new_user = User(**payload.model_dump())
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)  
+    return new_user
 
 
 # -------------------------------------------------------------------
@@ -95,8 +113,19 @@ def update_user(
     - Apply only provided fields
     - commit, refresh, return
     """
-    # TODO: implement
-    pass
+    
+    user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
+
+    db.commit()
+    db.refresh(user)
+    return user
 
 
 # -------------------------------------------------------------------
@@ -113,5 +142,20 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     - apply the Haversine formula
     - Earth radius ≈ 6371 km
     """
-    # TODO: implement
-    pass
+    R = 6371    
+
+    lat1 = math.radians(lat1)
+    lon1 = math.radians(lon1)
+    lat2 = math.radians(lat2)
+    lon2 = math.radians(lon2)
+
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+    c = 2 * math.asin(math.sqrt(a))
+
+    return R * c
+
+
+
