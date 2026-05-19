@@ -1,17 +1,3 @@
-"""
-app/schemas.py
-
-Pydantic schemas — validation and serialization models that define the
-shape of request and response JSON for the API.
-
-These are SEPARATE from the SQLAlchemy models in models.py:
-  - models.py  = database table structure
-  - schemas.py = API input/output structure
-
-Author: [David Gjorgjievski]
-Week 4
-"""
-
 from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, ConfigDict, EmailStr
@@ -21,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 # -------------------------------------------------------------------
 
 class ActivityResponse(BaseModel):
-    """Shape of an activity returned in API responses."""
     id: int
     name: str
     type: str
@@ -41,7 +26,6 @@ class ActivityResponse(BaseModel):
 
 
 class ActivityCreate(BaseModel):
-    """Shape of the JSON body when creating an activity (POST)."""
     name: str
     type: Optional[str] = "other"
     subtype: Optional[str] = None
@@ -53,7 +37,6 @@ class ActivityCreate(BaseModel):
     working_hours: Optional[dict] = None
 
 class ActivityUpdate(BaseModel):
-    """Shape of the JSON body when updating an activity (PUT)."""
     name: Optional[str] = None
     type: Optional[str] = None
     subtype: Optional[str] = None
@@ -70,7 +53,6 @@ class ActivityUpdate(BaseModel):
 # -------------------------------------------------------------------
 
 class UserResponse(BaseModel):
-    """Shape of a user returned in API responses."""
     id: int
     name: str
     surname: str
@@ -84,7 +66,6 @@ class UserResponse(BaseModel):
 
 
 class UserCreate(BaseModel):
-    """Shape of the JSON body when creating a user (POST)."""
     name: str
     surname: str
     email: EmailStr
@@ -94,7 +75,6 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    """Shape of the JSON body when updating a user (PUT)."""
     name: Optional[str] = None
     surname: Optional[str] = None
     email: Optional[EmailStr] = None

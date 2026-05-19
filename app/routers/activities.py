@@ -1,23 +1,4 @@
-"""
-app/routers/activities.py
 
-API endpoints for activities.
-
-Implements:
-  - GET  /activities                  (with filters)
-  - POST /activities                  (create)
-  - PUT  /activities/{activity_id}     (update)
-
-Supported query parameters for GET:
-  - limit            max results, 1-100, default 20
-  - category         filter by activity type/category
-  - min_rating       filter by minimum rating
-  - min_rating_count filter by minimum number of ratings
-  - open_now         return only currently open activities
-
-Author: [Person 3 fills in]
-Week 4
-"""
 
 from datetime import datetime, time
 from fastapi import APIRouter, Depends, Query, HTTPException
@@ -43,9 +24,7 @@ def get_activities(
     min_rating_count: int | None = Query(None),  # maps to Activity.user_rating_count
     open_now: bool = Query(False),
 ):
-    """
-    Return a list of activities, filtered by the query parameters.
-    """
+   
     query = db.query(Activity).filter(Activity.deleted_at.is_(None))
 
     if category is not None:
@@ -76,9 +55,7 @@ def create_activity(
     payload: ActivityCreate,
     db: Session = Depends(get_db),
 ):
-    """
-    Create a new activity from the request body.
-    """
+    
     activity = Activity(**payload.model_dump())
     db.add(activity)
     db.commit()
@@ -96,9 +73,6 @@ def update_activity(
     payload: ActivityUpdate,
     db: Session = Depends(get_db),
 ):
-    """
-    Update an existing activity.
-    """
     activity = (
         db.query(Activity)
         .filter(Activity.id == activity_id, Activity.deleted_at.is_(None))
@@ -128,18 +102,6 @@ _DAY_NAMES = [
 
 
 def is_open_now(working_hours: dict | None) -> bool:
-    """
-    Given a working_hours JSON dict, return True if the activity is
-    currently open based on the server's current day and time.
-
-    working_hours shape:
-        {"monday": [{"open": "09:00", "close": "23:00"}], ..., "sunday": []}
-
-    - None or missing day  -> treat as closed (return False)
-    - empty list []        -> closed that day
-    - checks current time against every interval for today
-    - handles overnight slots where close < open  (e.g. 22:00 – 02:00)
-    """
     if not working_hours:
         return False
 
