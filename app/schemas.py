@@ -81,3 +81,41 @@ class UserUpdate(BaseModel):
     destination: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+
+# -------------------------------------------------------------------
+# RECOMMENDATION SCHEMAS
+# -------------------------------------------------------------------
+
+class ScoreBreakdown(BaseModel):
+    distance: float
+    rating: float
+    popularity: float
+    category_relevance: float
+    final: float
+
+
+class RecommendationItem(BaseModel):
+    id: int
+    name: str
+    type: str
+    subtype: str | None
+    rating: float | None
+    user_rating_count: int
+    latitude: float
+    longitude: float
+    distance_km: float
+    is_open: bool
+    scores: ScoreBreakdown
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecommendationResponse(BaseModel):
+    response_timestamp: str   # ISO 8601 with timezone
+    context: str               # "breakfast" | "lunch" | "dinner" | "nightlife" | "general"
+    radius_km: float
+    user_latitude: float
+    user_longitude: float
+    count: int
+    results: list[RecommendationItem]

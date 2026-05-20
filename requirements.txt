@@ -21,3 +21,4 @@ urllib3==2.6.3
 uvicorn==0.46.0
 
 pandas
+
