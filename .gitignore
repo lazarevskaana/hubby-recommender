@@ -11,3 +11,5 @@ venv/
 
 # Docker
 postgres_data/
+
+*.docx

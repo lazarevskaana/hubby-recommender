@@ -7,7 +7,7 @@ Each function returns a value between 0.0 and 1.0.
 All scoring decisions are deterministic — same inputs always produce
 the same outputs (no randomness).
 
-Author: 
+Author: David Gjorgjievski
 Week 5
 """
 
@@ -29,16 +29,19 @@ def distance_score(distance_km: float, radius_km: float) -> float:
 
     Formula: 1 - (distance_km / radius_km), clamped to [0, 1]
     """
-    # TODO: implement
-    pass
+    if radius_km <= 0:
+        return 0.0
+
+    return max(0.0, min(1.0, 1 - (distance_km / radius_km)))
 
 
 def rating_score(rating: float | None) -> float:
     """
     Rating / 5. None or 0 -> 0.0.
     """
-    # TODO: implement
-    pass
+    if not rating:
+        return 0.0
+    return rating / 5.0
 
 
 def popularity_score(user_rating_count: int | None) -> float:
@@ -53,8 +56,9 @@ def popularity_score(user_rating_count: int | None) -> float:
         1000 -> 0.75
         10000+ -> 1.00
     """
-    # TODO: implement
-    pass
+    if not user_rating_count:
+        return 0.0
+    return min(1.0, math.log10(user_rating_count + 1) / 4)
 
 
 def category_relevance(subtype: str | None, context: str) -> float:
@@ -67,8 +71,12 @@ def category_relevance(subtype: str | None, context: str) -> float:
       subtype -> DEFAULT_RELEVANCE_UNKNOWN (0.0).
     - subtype is None -> 0.0
     """
-    # TODO: implement
-    pass
+    if subtype is None:
+        return 0.0
+    if context == "general":
+        return DEFAULT_RELEVANCE_GENERAL
+    return CATEGORY_RELEVANCE.get(context, {}).get(subtype, DEFAULT_RELEVANCE_UNKNOWN)
+
 
 
 def combined_score(
@@ -79,18 +87,22 @@ def combined_score(
     subtype: str | None,
     context: str,
 ) -> dict:
-    """
-    Compute all four sub-scores and the weighted final score.
-    Returns a dict matching the ScoreBreakdown schema:
-        {
-            "distance": ...,
-            "rating": ...,
-            "popularity": ...,
-            "category_relevance": ...,
-            "final": ...,
-        }
+    d = distance_score(distance_km, radius_km)
+    r = rating_score(rating)
+    p = popularity_score(user_rating_count)
+    c = category_relevance(subtype, context)
 
-    Final formula uses SCORE_WEIGHTS from recommendations_config.
-    """
-    # TODO: implement using the four functions above
-    pass
+    final = (
+        SCORE_WEIGHTS["distance"] * d
+        + SCORE_WEIGHTS["rating"] * r
+        + SCORE_WEIGHTS["popularity"] * p
+        + SCORE_WEIGHTS["category_relevance"] * c
+    )
+
+    return {
+        "distance": d,
+        "rating": r,
+        "popularity": p,
+        "category_relevance": c,
+        "final": final,
+    }
