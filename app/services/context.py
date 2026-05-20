@@ -24,12 +24,19 @@ def infer_context(when: datetime) -> str:
 
     Note: 'nightlife' wraps midnight (22:00 to 06:00). Handle that case.
     """
-    # TODO: implement
-    # hour = when.hour
-    # for context, (start, end) in CONTEXT_TIME_WINDOWS.items():
-    #     if context == "nightlife": handle wrap (start <= hour or hour < end)
-    #     else: start <= hour < end
-    pass
+
+    hour = when.hour
+    for context, (start, end) in CONTEXT_TIME_WINDOWS.items():
+        if context == "nightlife":
+            if hour >= start or hour < end:
+                return context
+        else:
+            if start <= hour < end:
+                return context
+            
+    return "general"
+    
+
 
 
 def validate_context(context: str | None) -> str:
@@ -39,5 +46,14 @@ def validate_context(context: str | None) -> str:
     - If a valid context name, return it lowercased.
     - Otherwise raise ValueError with the list of valid options.
     """
-    # TODO: implement
-    pass
+    if context is None:
+        return None
+    
+    lowered = context.lower()
+
+    if lowered in VALID_CONTEXTS:
+        return lowered
+    
+    raise ValueError(
+        f"Invalid context '{context}'. Valid options are: {sorted(VALID_CONTEXTS)}"
+    )
