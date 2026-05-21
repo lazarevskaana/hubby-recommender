@@ -9,6 +9,10 @@ load_dotenv()
 # Read the database URL we set in .env
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set — check your .env file")
+
+
 # The "engine" is SQLAlchemy's connection pool to PostgreSQL
 engine = create_engine(DATABASE_URL)
 

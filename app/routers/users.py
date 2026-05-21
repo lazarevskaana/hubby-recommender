@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import User
 from app.schemas import UserResponse, UserCreate, UserUpdate
+from app.services.geo import haversine_km
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -81,27 +82,4 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
-
-
-# -------------------------------------------------------------------
-# HELPER
-# -------------------------------------------------------------------
-
-def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    R = 6371    
-
-    lat1 = math.radians(lat1)
-    lon1 = math.radians(lon1)
-    lat2 = math.radians(lat2)
-    lon2 = math.radians(lon2)
-
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-
-    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
-    c = 2 * math.asin(math.sqrt(a))
-
-    return R * c
-
-
 

@@ -1,5 +1,5 @@
-
 import math
+
 from app.recommendations_config import (
     SCORE_WEIGHTS,
     CATEGORY_RELEVANCE,
