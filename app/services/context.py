@@ -1,13 +1,3 @@
-"""
-app/services/context.py
-
-Context handling — inferring the meal/time context from a timestamp
-when the caller didn't specify one.
-
-Author: [Person 4 fills in]
-Week 5
-"""
-
 from datetime import datetime
 from app.recommendations_config import CONTEXT_TIME_WINDOWS
 

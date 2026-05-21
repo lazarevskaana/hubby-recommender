@@ -64,8 +64,12 @@ def build_recommendations(
     """
     response_timestamp = datetime.now(timezone.utc).astimezone()
 
-    validated = validate_context(context)
+    try:
+        validated = validate_context(context)       # Predtoa vrakjase server error 500 a e 400 Bad Request.
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     resolved_context = validated if validated else infer_context(response_timestamp)
+
 
     activities = (
         db.query(Activity)
@@ -81,9 +85,10 @@ def build_recommendations(
         if is_open_at(activity.working_hours, response_timestamp)
     ]
 
- # Hide activities that clearly don't match the requested context.
+    # Hide activities that clearly don't match the requested context.
     # Cafes during dinner (0.3) are kept; bridges, museums, hotels (0.0) are dropped.
-    RELEVANCE_THRESHOLD = 0.3
+    # RELEVANCE_THRESHOLD = 0.3
+    # Ova mora da e trgnato zatoa sto sega e isto ama nema sekogas da e isto
 
     scored = []
     for activity, distance in open_nearby:

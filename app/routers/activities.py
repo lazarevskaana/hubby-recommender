@@ -36,12 +36,11 @@ def get_activities(
     if min_rating_count is not None:
         query = query.filter(Activity.user_rating_count >= min_rating_count)
 
-    activities = query.limit(limit).all()
-
-    # open_now can't be pushed to SQL — working_hours is a JSON column,
-    # so we evaluate it in Python after fetching.
     if open_now:
-        activities = [a for a in activities if is_open_now(a.working_hours)]
+        activities = [a for a in query.all() if is_open_now(a.working_hours)]
+        activities = activities[:limit]
+    else:
+        activities = query.limit(limit).all()
 
     return activities
 

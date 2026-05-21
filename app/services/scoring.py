@@ -1,16 +1,3 @@
-"""
-app/services/scoring.py
-
-The four sub-scores and the final combined recommendation score.
-Each function returns a value between 0.0 and 1.0.
-
-All scoring decisions are deterministic — same inputs always produce
-the same outputs (no randomness).
-
-Author: David Gjorgjievski
-Week 5
-"""
-
 import math
 from app.recommendations_config import (
     SCORE_WEIGHTS,
