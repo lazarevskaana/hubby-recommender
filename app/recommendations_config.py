@@ -1,9 +1,3 @@
-"""
-Team decisions for Week 5:
-- Travel-app-focused weights (distance + context matter most)
-- Sub-scores returned alongside the final score for explainability
-"""
-
 # -------------------------------------------------------------------
 # SCORING WEIGHTS
 # -------------------------------------------------------------------

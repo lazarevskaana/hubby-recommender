@@ -1,15 +1,3 @@
-"""
-app/services/scoring.py
-
-The four sub-scores and the final combined recommendation score.
-Each function returns a value between 0.0 and 1.0.
-
-All scoring decisions are deterministic — same inputs always produce
-the same outputs (no randomness).
-
-Author: David Gjorgjievski
-Week 5
-"""
 
 import math
 from app.recommendations_config import (
@@ -62,15 +50,6 @@ def popularity_score(user_rating_count: int | None) -> float:
 
 
 def category_relevance(subtype: str | None, context: str) -> float:
-    """
-    Look up the subtype in the CATEGORY_RELEVANCE map for this context.
-
-    - If context == "general": return DEFAULT_RELEVANCE_GENERAL (0.5)
-      for every subtype (no strong preference).
-    - Else: look up subtype in CATEGORY_RELEVANCE[context]. Missing
-      subtype -> DEFAULT_RELEVANCE_UNKNOWN (0.0).
-    - subtype is None -> 0.0
-    """
     if subtype is None:
         return 0.0
     if context == "general":

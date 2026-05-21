@@ -1,22 +1,3 @@
-"""
-app/routers/recommendations.py
-
-API endpoints for ranked, context-aware recommendations.
-
-Endpoints:
-  - GET /recommendations/{user_id}        uses the user's stored coordinates
-  - GET /recommendations?lat=...&lon=...  uses coordinates from query params
-
-Query parameters (both endpoints):
-  - radius_km   (default 1.0)
-  - context     ('breakfast' | 'lunch' | 'dinner' | 'nightlife' | 'general')
-                 if omitted, inferred from the current time
-  - limit       (default 10, max 50)
-
-Author: Ana (Person 1)
-Week 5
-"""
-
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, HTTPException

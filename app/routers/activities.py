@@ -1,5 +1,3 @@
-
-
 from datetime import datetime, time
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
