@@ -1,12 +1,21 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware     
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-
 from app.routers import activities, users, recommendations
 
 app = FastAPI(title="Hubby Recommender API")
+
+# Allow the frontend (running on localhost:5500 or wherever) to call the API.
+# In production you'd lock this to specific origins.
+app.add_middleware(                                     
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def root():
