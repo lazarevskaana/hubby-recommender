@@ -14,7 +14,7 @@ from app.recommendations_config import (
     DEFAULT_RADIUS_KM,
     DEFAULT_LIMIT,
     MAX_LIMIT,
-    RELEVANCE_THRESHOLD,   # add this
+    RELEVANCE_THRESHOLD,
 )
 from app.services.geo import filter_nearby, validate_coordinates
 from app.services.opening_hours import is_open_at
@@ -69,7 +69,6 @@ def build_recommendations(
     # Hide activities that clearly don't match the requested context.
     # Cafes during dinner (0.3) are kept; bridges, museums, hotels (0.0) are dropped.
     # RELEVANCE_THRESHOLD = 0.3
-    # Ova mora da e trgnato zatoa sto sega e isto ama nema sekogas da e isto
 
     scored = []
     for activity, distance in open_nearby:
@@ -81,8 +80,7 @@ def build_recommendations(
             subtype=activity.subtype,
             context=resolved_context,
         )
-        # Skip irrelevant activities — they don't fit the context.
-        # Exception: 'general' context where everything is fair game.
+    
         if resolved_context != "general" and scores["category_relevance"] < RELEVANCE_THRESHOLD:
             continue
         scored.append((activity, distance, scores))

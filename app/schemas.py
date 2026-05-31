@@ -107,7 +107,6 @@ class RecommendationItem(BaseModel):
     distance_km: float
     is_open: bool
     scores: ScoreBreakdown
-
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -68,6 +68,18 @@ CATEGORY_RELEVANCE = {
     },
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 # Default relevance when a subtype isn't in the map for the given context.
 DEFAULT_RELEVANCE_UNKNOWN = 0.0
 DEFAULT_RELEVANCE_GENERAL = 0.5
