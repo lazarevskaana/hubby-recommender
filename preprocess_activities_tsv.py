@@ -3,7 +3,10 @@ import pandas as pd
 from datetime import datetime
 import re
 
-INPUT_PATH = "data/unique_activities.tsv"
+INPUT_PATHS = [
+    "data/unique_activities.tsv",
+    "data/uniques_activities_2.tsv",
+]
 OUTPUT_PATH = "data/cleaned_activities.csv"
 
 TYPE_CATEGORY_MAP = {
@@ -59,10 +62,9 @@ DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sun
 # COLUMN CLEANING
 # -------------------------------------------------------------------
 
-def load_raw_data(path: str) -> pd.DataFrame:
-
-    df = pd.read_csv(path, sep='\t', dtype=str)
-
+def load_and_combine_raw_data(paths: list) -> pd.DataFrame:
+    frames = [pd.read_csv(p, sep='\t', dtype=str) for p in paths]
+    df = pd.concat(frames, ignore_index=True)
     return df
 
 
@@ -83,21 +85,14 @@ def rename_columns(df: pd.DataFrame) -> pd.DataFrame:
 # -------------------------------------------------------------------
 
 def normalize_values(df: pd.DataFrame) -> pd.DataFrame:
-    # Trim whitespace from text fields
     df["name"] = df["name"].str.strip()
     df["phone_number"] = df["phone_number"].str.strip()
-
-    # Empty subtype -> 'other' (type will also become 'other' via the map)
     df["subtype"] = df["subtype"].str.strip().fillna("other").replace("", "other")
 
-    # Coerce numeric columns - invalid / missing become NaN
     for col in ["latitude", "longitude", "rating"]:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # Empty user_rating_count -> 0
     df["user_rating_count"] = pd.to_numeric(df["user_rating_count"], errors="coerce").fillna(0).astype(int)
-
-    # phone_number: Leave NaN as-is (null in DB)
 
     return df
 
@@ -117,7 +112,6 @@ def _parse_interval(interval: str) -> dict:
     parts = re.split(r"\s[–—-]\s", interval)
     open_str, close_str = parts[0].strip(), parts[1].strip()
 
-    # If open has no AM/PM but close has PM, inherit PM
     has_ampm = lambda s: s.endswith("AM") or s.endswith("PM")
     if not has_ampm(open_str) and close_str.endswith("PM"):
         open_str += " PM"
@@ -128,23 +122,21 @@ def parse_day_string(day_string: str) -> list | None:
     if pd.isna(day_string) or str(day_string).strip() == "":
         return None
 
-    # Strip the "DayName: " prefix
     rest = day_string.split(": ", 1)[1] if ": " in day_string else day_string.strip()
 
     if rest == "Open 24 hours":
-        return [ { "open": "00:00", "close": "23:59" } ]
+        return [{"open": "00:00", "close": "23:59"}]
 
     if rest == "Closed":
         return []
 
-    # One or more intervals, e.g. "9:00 AM - 1:00 PM, 3:00 PM - 7:00 PM"
     result = []
     for interval in rest.split(", "):
         result.append(_parse_interval(interval))
     return result
 
 def build_working_hours_json(row: pd.Series) -> str:
-    return json.dumps( { day: parse_day_string(row[day]) for day in DAYS } )
+    return json.dumps({day: parse_day_string(row[day]) for day in DAYS})
 
 
 def transform_working_hours(df: pd.DataFrame) -> pd.DataFrame:
@@ -157,9 +149,9 @@ def transform_working_hours(df: pd.DataFrame) -> pd.DataFrame:
 # -------------------------------------------------------------------
 
 def main():
-    print("Loading raw TSV...")
-    df = load_raw_data(INPUT_PATH)
-    print(f"  Loaded {len(df)} rows")
+    print("Loading and combining raw TSV files...")
+    df = load_and_combine_raw_data(INPUT_PATHS)
+    print(f"  Loaded {len(df)} rows from {len(INPUT_PATHS)} files")
 
     print("Dropping unused columns...")
     df = drop_unused_columns(df)
@@ -180,7 +172,6 @@ def main():
     df.to_csv(OUTPUT_PATH, index=False)
     print(f"  Wrote {len(df)} rows")
 
-    # Summary stats — useful for verification and the team report
     print("\n--- Summary ---")
     print(f"Total activities:          {len(df)}")
     print(f"Type distribution:")

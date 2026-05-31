@@ -1,9 +1,7 @@
-
 import json
 import math
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
-import contextlib
 
 from app.database import SessionLocal
 from app.models import Activity
@@ -14,13 +12,12 @@ from app.models import Activity
 
 INPUT_PATH = "data/cleaned_activities.csv"
 
- 
+
 # -------------------------------------------------------------------
 # HELPERS
 # -------------------------------------------------------------------
 
 def nan_to_none(value):
-   
     if value is None:
         return None
     try:
@@ -63,7 +60,7 @@ def row_to_activity_dict(row: pd.Series) -> dict:
         "user_rating_count": int(nan_to_none(row["user_rating_count"]) or 0),
         "latitude":          nan_to_none(row["latitude"]),
         "longitude":         nan_to_none(row["longitude"]),
-        "working_hours":     row["working_hours"],  # already None or dict
+        "working_hours":     row["working_hours"],
     }
 
 
@@ -76,21 +73,34 @@ def main():
     df = load_cleaned_data(INPUT_PATH)
     print(f"  Loaded {len(df)} rows")
 
-    print("Converting rows to Activity dicts...")
-    activity_dicts = [row_to_activity_dict(row) for _, row in df.iterrows()]
-
-    print("Inserting into PostgreSQL...")
     session = SessionLocal()
     inserted = 0
     skipped = 0
+
     try:
-        session.bulk_insert_mappings(Activity, activity_dicts)
+        # Fetch existing names to detect duplicates (using name + lat/lng as identity)
+        existing = session.query(Activity.name, Activity.latitude, Activity.longitude).all()
+        existing_set = {(r.name, r.latitude, r.longitude) for r in existing}
+        print(f"  Found {len(existing_set)} existing activities in DB")
+
+        print("Inserting new activities...")
+        for _, row in df.iterrows():
+            activity_dict = row_to_activity_dict(row)
+            key = (activity_dict["name"], activity_dict["latitude"], activity_dict["longitude"])
+
+            if key in existing_set:
+                skipped += 1
+                continue
+
+            session.add(Activity(**activity_dict))
+            existing_set.add(key)  # prevent dupes within the same run
+            inserted += 1
+
         session.commit()
-        inserted = len(activity_dicts)
+
     except SQLAlchemyError as e:
         session.rollback()
-        print(f"  ERROR during insert: {e}")
-        skipped = len(activity_dicts)
+        print(f"  ERROR: {e}")
     finally:
         session.close()
 
