@@ -31,6 +31,7 @@ def build_recommendations(
     radius_km: float,
     context: str | None,
     limit: int,
+    offset: int = 0,
 ) -> RecommendationResponse:
     """
     The full recommendation pipeline:
@@ -86,7 +87,7 @@ def build_recommendations(
         scored.append((activity, distance, scores))
 
     scored.sort(key=lambda item: item[2]["final"], reverse=True)
-    top = scored[:limit]
+    top = scored[offset : offset + limit]
 
     results = [
         RecommendationItem(
@@ -129,6 +130,7 @@ def recommendations_for_user(
     radius_km: float = Query(DEFAULT_RADIUS_KM, gt=0, le=20),
     context: str | None = Query(None),
     limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    offset: int = Query(0, ge=0),
 ):
     """
     Recommendations for a user already in the database.
@@ -150,6 +152,7 @@ def recommendations_for_user(
         radius_km=radius_km,
         context=context,
         limit=limit,
+        offset=offset,
     )
 
 
@@ -161,6 +164,7 @@ def recommendations_by_coordinates(
     radius_km: float = Query(DEFAULT_RADIUS_KM, gt=0, le=20),
     context: str | None = Query(None),
     limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+    offset: int = Query(0, ge=0),
 ):
     """
     Recommendations for an arbitrary point on the map.
@@ -174,4 +178,5 @@ def recommendations_by_coordinates(
         radius_km=radius_km,
         context=context,
         limit=limit,
+        offset=offset,
     )

@@ -45,17 +45,24 @@ CONTEXT_TIME_WINDOWS = {
 CATEGORY_RELEVANCE = {
     "breakfast": {
         "cafe": 1.0, "coffee_shop": 1.0, "bakery": 1.0, "cake_shop": 0.7,
-        "restaurant": 0.4, "fast_food_restaurant": 0.4,
+        "restaurant": 0.4, "fast_food_restaurant": 0.4, "bistro": 0.6,
     },
     "lunch": {
         "restaurant": 1.0, "fast_food_restaurant": 0.9,
         "pizza_restaurant": 0.9, "italian_restaurant": 0.9,
         "meal_takeaway": 0.8, "cafe": 0.5, "bakery": 0.5,
+        "hamburger_restaurant": 0.9, "vegetarian_restaurant": 0.9,
+        "vegan_restaurant": 0.9, "mexican_restaurant": 0.9,
+        "sushi_restaurant": 0.9, "barbecue_restaurant": 0.9, "bistro": 0.9,
     },
     "dinner": {
         "restaurant": 1.0, "italian_restaurant": 1.0,
         "pizza_restaurant": 0.9, "bar": 0.6,
         "fast_food_restaurant": 0.4, "cafe": 0.3,
+        "hamburger_restaurant": 0.8, "vegetarian_restaurant": 1.0,
+        "vegan_restaurant": 1.0, "mexican_restaurant": 1.0,
+        "sushi_restaurant": 1.0, "barbecue_restaurant": 1.0, "bistro": 1.0,
+        
     },
     "nightlife": {
         "bar": 1.0, "night_club": 1.0,
