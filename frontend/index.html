@@ -1,207 +1,459 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Hubby Recommender – Where to next?</title>
-<meta name="description" content="Personalized local recommendations adapted to your location and the time of day." />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Hubby Recommender – Where to next?</title>
+    <meta
+      name="description"
+      content="Personalized local recommendations adapted to your location and the time of day."
+    />
 
-<script src="https://cdn.tailwindcss.com"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
 
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        fontFamily: {
-          display: ['Outfit', 'ui-sans-serif', 'system-ui'],
-          sans:    ['Inter',  'ui-sans-serif', 'system-ui'],
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ["Outfit", "ui-sans-serif", "system-ui"],
+              sans: ["Inter", "ui-sans-serif", "system-ui"],
+            },
+            colors: {
+              hubby: {
+                orange: "#FF8800",
+                yellow: "#FFB347",
+                coral: "#FF8A65",
+                peach: "#FFCCBC",
+                ink: "#2D3748",
+                paper: "#FFFEFC",
+              },
+            },
+            boxShadow: {
+              float:
+                "0 20px 60px -20px rgba(255,136,0,0.25), 0 8px 24px -12px rgba(45,55,72,0.15)",
+              card: "0 10px 30px -15px rgba(45,55,72,0.25)",
+              pop: "0 30px 80px -20px rgba(45,55,72,0.35)",
+            },
+          },
         },
-        colors: {
-          hubby: {
-            orange: '#FF8800',
-            yellow: '#FFB347',
-            coral:  '#FF8A65',
-            peach:  '#FFCCBC',
-            ink:    '#2D3748',
-            paper:  '#FFFEFC',
-          }
-        },
-        boxShadow: {
-          float: '0 20px 60px -20px rgba(255,136,0,0.25), 0 8px 24px -12px rgba(45,55,72,0.15)',
-          card:  '0 10px 30px -15px rgba(45,55,72,0.25)',
+      };
+    </script>
+
+    <style>
+      html,
+      body {
+        background: #fffefc;
+        color: #2d3748;
+        font-family: "Inter", sans-serif;
+      }
+      .font-display {
+        font-family: "Outfit", sans-serif;
+        letter-spacing: -0.01em;
+      }
+
+      .blob {
+        position: absolute;
+        border-radius: 9999px;
+        filter: blur(80px);
+        opacity: 0.55;
+        pointer-events: none;
+        z-index: 0;
+      }
+      .blob-1 {
+        width: 520px;
+        height: 520px;
+        background: #ffb347;
+        top: -160px;
+        left: -120px;
+      }
+      .blob-2 {
+        width: 460px;
+        height: 460px;
+        background: #ff8a65;
+        top: 120px;
+        right: -160px;
+        opacity: 0.45;
+      }
+      .blob-3 {
+        width: 600px;
+        height: 600px;
+        background: #ffccbc;
+        bottom: -260px;
+        left: 30%;
+        opacity: 0.5;
+      }
+      .blob-4 {
+        width: 340px;
+        height: 340px;
+        background: #ff8800;
+        bottom: 200px;
+        right: 10%;
+        opacity: 0.18;
+      }
+
+      .glass {
+        background: rgba(255, 254, 252, 0.72);
+        backdrop-filter: saturate(140%) blur(14px);
+        -webkit-backdrop-filter: saturate(140%) blur(14px);
+      }
+
+      .pulse-dot {
+        position: relative;
+        width: 8px;
+        height: 8px;
+        border-radius: 9999px;
+        background: #22c55e;
+      }
+      .pulse-dot::after {
+        content: "";
+        position: absolute;
+        inset: -4px;
+        border-radius: 9999px;
+        background: #22c55e;
+        opacity: 0.4;
+        animation: pulse 1.6s ease-out infinite;
+      }
+      @keyframes pulse {
+        0% {
+          transform: scale(0.6);
+          opacity: 0.6;
+        }
+        100% {
+          transform: scale(1.8);
+          opacity: 0;
         }
       }
-    }
-  }
-</script>
 
-<style>
-  html, body { background: #FFFEFC; color:#2D3748; font-family:'Inter',sans-serif; }
-  .font-display { font-family:'Outfit',sans-serif; letter-spacing:-0.01em; }
+      .cell {
+        transition: background 0.2s ease;
+      }
+      .cell:hover {
+        background: #fff5ec;
+      }
+      .cell input,
+      .cell select {
+        background: transparent;
+        outline: none;
+        width: 100%;
+        font-weight: 500;
+        color: #2d3748;
+      }
+      .cell input:disabled {
+        color: #a0aec0;
+        cursor: not-allowed;
+      }
+      .cell .lbl {
+        font-size: 10px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #a0926d;
+        font-weight: 600;
+      }
 
-  .blob { position:absolute; border-radius:9999px; filter:blur(80px); opacity:.55; pointer-events:none; z-index:0; }
-  .blob-1 { width:520px; height:520px; background:#FFB347; top:-160px; left:-120px; }
-  .blob-2 { width:460px; height:460px; background:#FF8A65; top:120px; right:-160px; opacity:.45; }
-  .blob-3 { width:600px; height:600px; background:#FFCCBC; bottom:-260px; left:30%; opacity:.5; }
-  .blob-4 { width:340px; height:340px; background:#FF8800; bottom:200px; right:10%; opacity:.18; }
+      .score-bar {
+        background: linear-gradient(90deg, #ffb347 0%, #ff8800 100%);
+        height: 8px;
+        border-radius: 9999px;
+      }
 
-  .glass { background:rgba(255,254,252,0.72); backdrop-filter:saturate(140%) blur(14px); -webkit-backdrop-filter:saturate(140%) blur(14px); }
+      /* Card + hover popover */
+      .rec-card {
+        transition:
+          transform 0.25s ease,
+          box-shadow 0.25s ease;
+        position: relative;
+        cursor: pointer;
+      }
+      .rec-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 24px 50px -22px rgba(45, 55, 72, 0.3);
+      }
 
-  .pulse-dot { position:relative; width:8px; height:8px; border-radius:9999px; background:#22c55e; }
-  .pulse-dot::after { content:''; position:absolute; inset:-4px; border-radius:9999px; background:#22c55e; opacity:.4; animation:pulse 1.6s ease-out infinite; }
-  @keyframes pulse { 0%{transform:scale(.6);opacity:.6} 100%{transform:scale(1.8);opacity:0} }
+      /* Detail popover that appears on hover */
+      .detail-popover {
+        position: fixed;
+        z-index: 100;
+        width: 380px;
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 30px 80px -20px rgba(45, 55, 72, 0.35);
+        padding: 0;
+        overflow: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.95);
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+      }
+      .detail-popover.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1);
+      }
 
-  .cell { transition:background .2s ease; }
-  .cell:hover { background:#FFF5EC; }
-  .cell input, .cell select { background:transparent; outline:none; width:100%; font-weight:500; color:#2D3748; }
-  .cell input:disabled { color:#A0AEC0; cursor:not-allowed; }
-  .cell .lbl { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:#A0926D; font-weight:600; }
+      .spinner {
+        width: 34px;
+        height: 34px;
+        border-radius: 9999px;
+        border: 3px solid #ffe2c2;
+        border-top-color: #ff8800;
+        animation: spin 0.9s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
 
-  .score-bar { background:linear-gradient(90deg,#FFB347 0%,#FF8800 100%); height:8px; border-radius:9999px; }
+      /* Leaflet popups — fully restyled */
+      #map {
+        border-radius: 20px;
+      }
+      .leaflet-popup-content-wrapper {
+        border-radius: 16px;
+        padding: 0;
+        box-shadow: 0 12px 32px -8px rgba(45, 55, 72, 0.25);
+        border: 1px solid rgba(255, 136, 0, 0.15);
+      }
+      .leaflet-popup-content {
+        margin: 0;
+        font-family: "Inter", sans-serif;
+        color: #2d3748;
+        width: 240px !important;
+      }
+      .leaflet-popup-tip {
+        background: white;
+      }
 
-  .rec-card { transition:transform .25s ease, box-shadow .25s ease; }
-  .rec-card:hover { transform:translateY(-4px); box-shadow:0 24px 50px -22px rgba(45,55,72,0.30); }
+      .marker-pin {
+        width: 30px;
+        height: 30px;
+        border-radius: 9999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        box-shadow: 0 6px 14px -4px rgba(0, 0, 0, 0.35);
+        border: 2px solid #fff;
+      }
+      .marker-user {
+        background: #2d3748;
+        color: #fff;
+      }
+      .marker-act {
+        background: #ff8800;
+        color: #fff;
+      }
 
-  .spinner { width:34px; height:34px; border-radius:9999px; border:3px solid #FFE2C2; border-top-color:#FF8800; animation:spin 0.9s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
+      @media (max-width: 768px) {
+        .search-row {
+          flex-direction: column;
+        }
+        .search-row .divider {
+          display: none;
+        }
+        .cell {
+          width: 100%;
+        }
+        .detail-popover {
+          display: none;
+        } /* No hover on mobile */
+      }
+    </style>
+  </head>
+  <body class="relative overflow-x-hidden">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="blob blob-4"></div>
 
-  #map { border-radius:20px; }
-  .leaflet-popup-content-wrapper { border-radius:14px; }
-  .leaflet-popup-content { font-family:'Inter',sans-serif; color:#2D3748; }
-
-  .marker-pin { width:30px;height:30px;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-size:14px;
-    box-shadow:0 6px 14px -4px rgba(0,0,0,.35); border:2px solid #fff; }
-  .marker-user { background:#2D3748; color:#fff; }
-  .marker-act  { background:#FF8800; color:#fff; }
-
-  @media (max-width:768px) {
-    .search-row { flex-direction:column; }
-    .search-row .divider { display:none; }
-    .cell { width:100%; }
-  }
-</style>
-</head>
-<body class="relative overflow-x-hidden">
-
-<div class="blob blob-1"></div>
-<div class="blob blob-2"></div>
-<div class="blob blob-3"></div>
-<div class="blob blob-4"></div>
-
-<!-- HEADER -->
-<header class="glass sticky top-0 z-40 border-b border-orange-100/60">
-  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-hubby-orange text-white font-display font-bold text-xl flex items-center justify-center shadow-float">H</div>
-      <div class="leading-tight">
-        <div class="font-display font-bold text-lg text-hubby-ink">Hubby Recommender</div>
-        <div class="text-xs text-hubby-ink/60">Discover what's around, right when it matters.</div>
+    <!-- HEADER -->
+    <header class="glass sticky top-0 z-40 border-b border-orange-100/60">
+      <div
+        class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between"
+      >
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-hubby-orange text-white font-display font-bold text-xl flex items-center justify-center shadow-float"
+          >
+            H
+          </div>
+          <div class="leading-tight">
+            <div class="font-display font-bold text-lg text-hubby-ink">
+              Hubby Recommender
+            </div>
+            <div class="text-xs text-hubby-ink/60">
+              Discover what's around, right when it matters.
+            </div>
+          </div>
+        </div>
+        <div
+          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-100"
+        >
+          <span class="pulse-dot"></span>
+          <span class="text-xs font-semibold text-green-700">Connected</span>
+        </div>
       </div>
-    </div>
-    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-100">
-      <span class="pulse-dot"></span>
-      <span class="text-xs font-semibold text-green-700">Connected</span>
-    </div>
-  </div>
-</header>
+    </header>
 
-<main class="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
-
-  <!-- HERO -->
-  <section class="text-center max-w-3xl mx-auto">
-    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100/70 text-hubby-orange text-xs font-semibold mb-6">
-      <span>✨</span> Powered by 206+ local spots
-    </div>
-    <h1 class="font-display font-extrabold text-5xl md:text-6xl text-hubby-ink leading-[1.05]">
-      Where to <span class="italic text-hubby-orange">next?</span>
-    </h1>
-    <p class="mt-5 text-hubby-ink/70 text-lg leading-relaxed">
-      Personalized recommendations adapted to your location and the time of day.
-      From breakfast cafés to late-night spots.
-    </p>
-  </section>
-
-  <!-- SEARCH BAR -->
-  <section class="mt-10 max-w-5xl mx-auto">
-    <div class="bg-white rounded-3xl shadow-float p-2 md:p-3">
-      <div class="search-row flex items-stretch gap-0">
-        <div class="cell flex-1 rounded-2xl px-4 py-3">
-          <div class="lbl flex items-center gap-1.5">👤 User ID</div>
-          <input id="f-user" type="text" placeholder="optional" />
+    <main class="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
+      <!-- HERO -->
+      <section class="text-center max-w-3xl mx-auto">
+        <div
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100/70 text-hubby-orange text-xs font-semibold mb-6"
+        >
+          <span>✨</span> Powered by 206+ local spots
         </div>
-        <div class="divider w-px bg-orange-100 my-3"></div>
+        <h1
+          class="font-display font-extrabold text-5xl md:text-6xl text-hubby-ink leading-[1.05]"
+        >
+          Where to <span class="italic text-hubby-orange">next?</span>
+        </h1>
+        <p class="mt-5 text-hubby-ink/70 text-lg leading-relaxed">
+          Personalized recommendations adapted to your location and the time of
+          day. From breakfast cafés to late-night spots.
+        </p>
+      </section>
 
-        <div class="cell flex-1 rounded-2xl px-4 py-3">
-          <div class="lbl flex items-center gap-1.5">📍 Latitude</div>
-          <input id="f-lat" type="number" step="any" placeholder="42.0000" />
+      <!-- SEARCH BAR -->
+      <section class="mt-10 max-w-5xl mx-auto">
+        <div class="bg-white rounded-3xl shadow-float p-2 md:p-3">
+          <div class="search-row flex items-stretch gap-0">
+            <div class="cell flex-1 rounded-2xl px-4 py-3">
+              <div class="lbl flex items-center gap-1.5">👤 User ID</div>
+              <input id="f-user" type="text" placeholder="optional" />
+            </div>
+            <div class="divider w-px bg-orange-100 my-3"></div>
+
+            <div class="cell flex-1 rounded-2xl px-4 py-3">
+              <div class="lbl flex items-center gap-1.5">📍 Latitude</div>
+              <input
+                id="f-lat"
+                type="number"
+                step="any"
+                placeholder="42.0000"
+              />
+            </div>
+            <div class="divider w-px bg-orange-100 my-3"></div>
+
+            <div class="cell flex-1 rounded-2xl px-4 py-3">
+              <div class="lbl flex items-center gap-1.5">🌍 Longitude</div>
+              <input
+                id="f-lon"
+                type="number"
+                step="any"
+                placeholder="21.4300"
+              />
+            </div>
+            <div class="divider w-px bg-orange-100 my-3"></div>
+
+            <div class="cell flex-1 rounded-2xl px-4 py-3">
+              <div class="lbl">Context</div>
+              <select id="f-ctx">
+                <option value="">🕒 Auto</option>
+                <option value="breakfast">🥐 Breakfast</option>
+                <option value="lunch">🥗 Lunch</option>
+                <option value="general">🏛️ General</option>
+                <option value="dinner">🍽️ Dinner</option>
+                <option value="nightlife">🍸 Nightlife</option>
+              </select>
+            </div>
+            <div class="divider w-px bg-orange-100 my-3"></div>
+
+            <div class="cell w-full md:w-32 rounded-2xl px-4 py-3">
+              <div class="lbl">📏 Radius (km)</div>
+              <input
+                id="f-radius"
+                type="number"
+                step="0.1"
+                min="0.1"
+                value="1.0"
+              />
+            </div>
+
+            <button
+              id="f-go"
+              class="mt-2 md:mt-0 md:ml-2 bg-hubby-orange hover:bg-orange-600 text-white font-semibold rounded-2xl px-6 py-4 flex items-center justify-center gap-2 shadow-float transition"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m21 21-4.3-4.3" />
+              </svg>
+              Search
+            </button>
+          </div>
         </div>
-        <div class="divider w-px bg-orange-100 my-3"></div>
+        <p class="text-center text-sm text-hubby-ink/60 mt-3">
+          💡 Leave coordinates empty to use your current location · Enter a User
+          ID to use their saved location
+        </p>
+      </section>
 
-        <div class="cell flex-1 rounded-2xl px-4 py-3">
-          <div class="lbl flex items-center gap-1.5">🌍 Longitude</div>
-          <input id="f-lon" type="number" step="any" placeholder="21.4300" />
-        </div>
-        <div class="divider w-px bg-orange-100 my-3"></div>
-
-        <div class="cell flex-1 rounded-2xl px-4 py-3">
-          <div class="lbl">Context</div>
-          <select id="f-ctx">
-            <option value="">🕒 Auto</option>
-            <option value="breakfast">🥐 Breakfast</option>
-            <option value="lunch">🥗 Lunch</option>
-            <option value="dinner">🍽️ Dinner</option>
-            <option value="nightlife">🍸 Nightlife</option>
-          </select>
-        </div>
-        <div class="divider w-px bg-orange-100 my-3"></div>
-
-        <div class="cell w-full md:w-32 rounded-2xl px-4 py-3">
-          <div class="lbl">📏 Radius (km)</div>
-          <input id="f-radius" type="number" step="0.1" min="0.1" value="1.0" />
+      <!-- CONTENT -->
+      <section
+        id="results-section"
+        class="mt-12 grid grid-cols-1 md:grid-cols-5 gap-8"
+      >
+        <!-- MAP -->
+        <div class="md:col-span-2">
+          <div
+            id="map"
+            class="w-full h-[520px] md:h-[640px] shadow-card sticky top-24"
+          ></div>
         </div>
 
-        <button id="f-go" class="mt-2 md:mt-0 md:ml-2 bg-hubby-orange hover:bg-orange-600 text-white font-semibold rounded-2xl px-6 py-4 flex items-center justify-center gap-2 shadow-float transition">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-          Search
-        </button>
-      </div>
-    </div>
-    <p class="text-center text-sm text-hubby-ink/60 mt-3">💡 Leave coordinates empty to use your current location</p>
-  </section>
+        <!-- RESULTS -->
+        <div class="md:col-span-3">
+          <div
+            id="meta"
+            class="flex items-center justify-between mb-5 text-sm text-hubby-ink/70 font-medium"
+          ></div>
+          <div id="results" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
+          <div id="scroll-trigger" class="h-1"></div>
+          <div id="state" class="py-10"></div>
+          <div id="scroll-spinner" class="hidden py-8 flex justify-center">
+            <div class="spinner"></div>
+          </div>
+        </div>
+      </section>
+    </main>
 
-  <!-- CONTENT -->
-  <section id="results-section" class="mt-12 grid grid-cols-1 md:grid-cols-5 gap-8">
+    <!-- Detail popover (single instance, repositioned on hover) -->
+    <div id="detail-popover" class="detail-popover"></div>
 
-    <!-- MAP -->
-    <div class="md:col-span-2">
-      <div id="map" class="w-full h-[520px] md:h-[640px] shadow-card sticky top-24"></div>
-    </div>
+    <footer class="relative z-10 text-center text-xs text-hubby-ink/50 pb-10">
+      Made with 🧡 by the Hubby team
+    </footer>
 
-    <!-- RESULTS -->
-    <div class="md:col-span-3">
-      <div id="meta" class="flex items-center justify-between mb-5 text-sm text-hubby-ink/70 font-medium"></div>
-      <div id="results" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
-      <div id="scroll-trigger" class="h-1"></div>
-      <div id="state" class="py-10"></div>
-      <div id="scroll-spinner" class="hidden py-8 flex justify-center">
-        <div class="spinner"></div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<footer class="relative z-10 text-center text-xs text-hubby-ink/50 pb-10">
-  Made with 🧡 by the Hubby team
-</footer>
-
-<script src="app.js"></script>
-</body>
+    <script src="app.js"></script>
+  </body>
 </html>

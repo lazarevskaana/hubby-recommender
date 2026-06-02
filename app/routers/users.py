@@ -2,6 +2,7 @@
 import math
 
 from fastapi import APIRouter, Depends, Query, HTTPException
+
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -36,6 +37,19 @@ def get_users(
         return nearby[:limit]
 
     return query.limit(limit).all()
+
+
+@router.get("/{user_id}", response_model=UserResponse)
+def get_user(user_id: int, db: Session = Depends(get_db)):
+    """Get a single user by ID."""
+    user = (
+        db.query(User)
+        .filter(User.id == user_id, User.deleted_at.is_(None))
+        .first()
+    )
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 # -------------------------------------------------------------------
@@ -82,4 +96,6 @@ def update_user(
     db.commit()
     db.refresh(user)
     return user
+
+
 
