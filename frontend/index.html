@@ -4,30 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Hubby Recommender – Where to next?</title>
-    <meta
-      name="description"
-      content="Personalized local recommendations adapted to your location and the time of day."
-    />
+    <meta name="description" content="Personalized local recommendations adapted to your location and the time of day." />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""
-    />
-    <script
-      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-      crossorigin=""
-    ></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <script>
       tailwind.config = {
@@ -48,8 +32,7 @@
               },
             },
             boxShadow: {
-              float:
-                "0 20px 60px -20px rgba(255,136,0,0.25), 0 8px 24px -12px rgba(45,55,72,0.15)",
+              float: "0 20px 60px -20px rgba(255,136,0,0.25), 0 8px 24px -12px rgba(45,55,72,0.15)",
               card: "0 10px 30px -15px rgba(45,55,72,0.25)",
               pop: "0 30px 80px -20px rgba(45,55,72,0.35)",
             },
@@ -59,225 +42,103 @@
     </script>
 
     <style>
-      html,
-      body {
+      html, body {
         background: #fffefc;
         color: #2d3748;
         font-family: "Inter", sans-serif;
       }
-      .font-display {
-        font-family: "Outfit", sans-serif;
-        letter-spacing: -0.01em;
-      }
+      .font-display { font-family: "Outfit", sans-serif; letter-spacing: -0.01em; }
 
-      .blob {
-        position: absolute;
-        border-radius: 9999px;
-        filter: blur(80px);
-        opacity: 0.55;
-        pointer-events: none;
-        z-index: 0;
-      }
-      .blob-1 {
-        width: 520px;
-        height: 520px;
-        background: #ffb347;
-        top: -160px;
-        left: -120px;
-      }
-      .blob-2 {
-        width: 460px;
-        height: 460px;
-        background: #ff8a65;
-        top: 120px;
-        right: -160px;
-        opacity: 0.45;
-      }
-      .blob-3 {
-        width: 600px;
-        height: 600px;
-        background: #ffccbc;
-        bottom: -260px;
-        left: 30%;
-        opacity: 0.5;
-      }
-      .blob-4 {
-        width: 340px;
-        height: 340px;
-        background: #ff8800;
-        bottom: 200px;
-        right: 10%;
-        opacity: 0.18;
-      }
+      .blob { position: absolute; border-radius: 9999px; filter: blur(80px); opacity: 0.55; pointer-events: none; z-index: 0; }
+      .blob-1 { width: 520px; height: 520px; background: #ffb347; top: -160px; left: -120px; }
+      .blob-2 { width: 460px; height: 460px; background: #ff8a65; top: 120px; right: -160px; opacity: 0.45; }
+      .blob-3 { width: 600px; height: 600px; background: #ffccbc; bottom: -260px; left: 30%; opacity: 0.5; }
+      .blob-4 { width: 340px; height: 340px; background: #ff8800; bottom: 200px; right: 10%; opacity: 0.18; }
 
       .glass {
-        background: rgba(255, 254, 252, 0.72);
+        background: rgba(255,254,252,0.72);
         backdrop-filter: saturate(140%) blur(14px);
         -webkit-backdrop-filter: saturate(140%) blur(14px);
       }
 
-      .pulse-dot {
-        position: relative;
-        width: 8px;
-        height: 8px;
-        border-radius: 9999px;
-        background: #22c55e;
-      }
-      .pulse-dot::after {
-        content: "";
-        position: absolute;
-        inset: -4px;
-        border-radius: 9999px;
-        background: #22c55e;
-        opacity: 0.4;
-        animation: pulse 1.6s ease-out infinite;
-      }
-      @keyframes pulse {
-        0% {
-          transform: scale(0.6);
-          opacity: 0.6;
-        }
-        100% {
-          transform: scale(1.8);
-          opacity: 0;
-        }
-      }
+      .pulse-dot { position: relative; width: 8px; height: 8px; border-radius: 9999px; background: #22c55e; }
+      .pulse-dot::after { content: ""; position: absolute; inset: -4px; border-radius: 9999px; background: #22c55e; opacity: 0.4; animation: pulse 1.6s ease-out infinite; }
+      @keyframes pulse { 0% { transform: scale(0.6); opacity: 0.6; } 100% { transform: scale(1.8); opacity: 0; } }
 
-      .cell {
-        transition: background 0.2s ease;
-      }
-      .cell:hover {
-        background: #fff5ec;
-      }
-      .cell input,
-      .cell select {
-        background: transparent;
-        outline: none;
-        width: 100%;
-        font-weight: 500;
-        color: #2d3748;
-      }
-      .cell input:disabled {
-        color: #a0aec0;
-        cursor: not-allowed;
-      }
-      .cell .lbl {
-        font-size: 10px;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: #a0926d;
-        font-weight: 600;
-      }
+      .cell { transition: background 0.2s ease; }
+      .cell:hover { background: #fff5ec; }
+      .cell input, .cell select { background: transparent; outline: none; width: 100%; font-weight: 500; color: #2d3748; }
+      .cell input:disabled { color: #a0aec0; cursor: not-allowed; }
+      .cell .lbl { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #a0926d; font-weight: 600; }
 
-      .score-bar {
-        background: linear-gradient(90deg, #ffb347 0%, #ff8800 100%);
-        height: 8px;
-        border-radius: 9999px;
-      }
+      .score-bar { background: linear-gradient(90deg, #ffb347 0%, #ff8800 100%); height: 8px; border-radius: 9999px; }
 
-      /* Card + hover popover */
-      .rec-card {
-        transition:
-          transform 0.25s ease,
-          box-shadow 0.25s ease;
-        position: relative;
-        cursor: pointer;
-      }
-      .rec-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 24px 50px -22px rgba(45, 55, 72, 0.3);
-      }
-
-      /* Detail popover that appears on hover */
-      .detail-popover {
-        position: fixed;
-        z-index: 100;
-        width: 380px;
-        background: white;
-        border-radius: 24px;
-        box-shadow: 0 30px 80px -20px rgba(45, 55, 72, 0.35);
-        padding: 0;
+      .rec-card { transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; cursor: pointer; }
+      .rec-card:hover { transform: translateY(-4px); box-shadow: 0 24px 50px -22px rgba(45,55,72,0.3); }
+      .rec-card h3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
         overflow: hidden;
-        opacity: 0;
-        pointer-events: none;
+        line-height: 1.2;
+      }
+
+      .rec-card .sub-pill {
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .detail-popover {
+        position: fixed; z-index: 200; width: 380px;
+        background: white; border-radius: 24px;
+        box-shadow: 0 30px 80px -20px rgba(45,55,72,0.35);
+        padding: 0; overflow: hidden;
+        opacity: 0; pointer-events: none;
         transform: scale(0.95);
-        transition:
-          opacity 0.18s ease,
-          transform 0.18s ease;
+        transition: opacity 0.18s ease, transform 0.18s ease;
       }
-      .detail-popover.visible {
-        opacity: 1;
-        pointer-events: auto;
-        transform: scale(1);
-      }
+      .detail-popover.visible { opacity: 1; pointer-events: auto; transform: scale(1); }
 
-      .spinner {
-        width: 34px;
-        height: 34px;
-        border-radius: 9999px;
-        border: 3px solid #ffe2c2;
-        border-top-color: #ff8800;
-        animation: spin 0.9s linear infinite;
-      }
-      @keyframes spin {
-        to {
-          transform: rotate(360deg);
-        }
-      }
+      .spinner { width: 34px; height: 34px; border-radius: 9999px; border: 3px solid #ffe2c2; border-top-color: #ff8800; animation: spin 0.9s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
 
-      /* Leaflet popups — fully restyled */
-      #map {
-        border-radius: 20px;
-      }
-      .leaflet-popup-content-wrapper {
-        border-radius: 16px;
-        padding: 0;
-        box-shadow: 0 12px 32px -8px rgba(45, 55, 72, 0.25);
-        border: 1px solid rgba(255, 136, 0, 0.15);
-      }
-      .leaflet-popup-content {
-        margin: 0;
-        font-family: "Inter", sans-serif;
-        color: #2d3748;
-        width: 240px !important;
-      }
-      .leaflet-popup-tip {
+      /* Map full width, below the search bar */
+      #map { border-radius: 20px; width: 100%; }
+
+      .leaflet-popup-content-wrapper { border-radius: 16px; padding: 0; box-shadow: 0 12px 32px -8px rgba(45,55,72,0.25); border: 1px solid rgba(255,136,0,0.15); }
+      .leaflet-popup-content { margin: 0; font-family: "Inter", sans-serif; color: #2d3748; width: 240px !important; }
+      .leaflet-popup-tip { background: white; }
+
+      .marker-pin { width: 30px; height: 30px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 14px; box-shadow: 0 6px 14px -4px rgba(0,0,0,0.35); border: 2px solid #fff; }
+      .marker-user { background: #2d3748; color: #fff; }
+      .marker-act  { background: #ff8800; color: #fff; }
+
+      /* User suggestions dropdown — must sit above the map */
+      .suggest-box {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0; right: 0;
         background: white;
-      }
+        border-radius: 16px;
+        box-shadow: 0 12px 40px -10px rgba(45,55,72,0.2);
+        border: 1px solid #FFE0B2;
+        overflow: hidden;
+        z-index: 10000;
 
-      .marker-pin {
-        width: 30px;
-        height: 30px;
-        border-radius: 9999px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        box-shadow: 0 6px 14px -4px rgba(0, 0, 0, 0.35);
-        border: 2px solid #fff;
       }
-      .marker-user {
-        background: #2d3748;
-        color: #fff;
-      }
-      .marker-act {
-        background: #ff8800;
-        color: #fff;
-      }
+      .suggest-item { padding: 10px 16px; cursor: pointer; font-size: 14px; color: #2D3748; transition: background 0.15s ease; display: flex; align-items: center; }
+      .suggest-item:hover { background: #FFF5EC; }
+
+      /* Search bar sits above map via z-index */
+      #search-section { position: relative; z-index: 10000; }
 
       @media (max-width: 768px) {
-        .search-row {
-          flex-direction: column;
-        }
-        .search-row .divider {
-          display: none;
-        }
-        .cell {
-          width: 100%;
-        }
-        .detail-popover {
-          display: none;
-        } /* No hover on mobile */
+        .search-row { flex-direction: column; }
+        .search-row .divider { display: none; }
+        .cell { width: 100%; }
+        .detail-popover { display: none; }
       }
     </style>
   </head>
@@ -289,27 +150,15 @@
 
     <!-- HEADER -->
     <header class="glass sticky top-0 z-40 border-b border-orange-100/60">
-      <div
-        class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between"
-      >
+      <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div
-            class="w-10 h-10 rounded-xl bg-hubby-orange text-white font-display font-bold text-xl flex items-center justify-center shadow-float"
-          >
-            H
-          </div>
+          <div class="w-10 h-10 rounded-xl bg-hubby-orange text-white font-display font-bold text-xl flex items-center justify-center shadow-float">H</div>
           <div class="leading-tight">
-            <div class="font-display font-bold text-lg text-hubby-ink">
-              Hubby Recommender
-            </div>
-            <div class="text-xs text-hubby-ink/60">
-              Discover what's around, right when it matters.
-            </div>
+            <div class="font-display font-bold text-lg text-hubby-ink">Hubby Recommender</div>
+            <div class="text-xs text-hubby-ink/60">Discover what's around, right when it matters.</div>
           </div>
         </div>
-        <div
-          class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-100"
-        >
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-100">
           <span class="pulse-dot"></span>
           <span class="text-xs font-semibold text-green-700">Connected</span>
         </div>
@@ -317,63 +166,50 @@
     </header>
 
     <main class="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
+
       <!-- HERO -->
       <section class="text-center max-w-3xl mx-auto">
-        <div
-          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100/70 text-hubby-orange text-xs font-semibold mb-6"
-        >
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100/70 text-hubby-orange text-xs font-semibold mb-6">
           <span>✨</span> Powered by 206+ local spots
         </div>
-        <h1
-          class="font-display font-extrabold text-5xl md:text-6xl text-hubby-ink leading-[1.05]"
-        >
+        <h1 class="font-display font-extrabold text-5xl md:text-6xl text-hubby-ink leading-[1.05]">
           Where to <span class="italic text-hubby-orange">next?</span>
         </h1>
         <p class="mt-5 text-hubby-ink/70 text-lg leading-relaxed">
-          Personalized recommendations adapted to your location and the time of
-          day. From breakfast cafés to late-night spots.
+          Personalized recommendations adapted to your location and the time of day. From breakfast cafés to late-night spots.
         </p>
       </section>
 
-      <!-- SEARCH BAR -->
-      <section class="mt-10 max-w-5xl mx-auto">
+      <!-- SEARCH BAR — z-index above map so dropdown shows over it -->
+      <section id="search-section" class="mt-10 max-w-5xl mx-auto">
         <div class="bg-white rounded-3xl shadow-float p-2 md:p-3">
           <div class="search-row flex items-stretch gap-0">
-            <div class="cell flex-1 rounded-2xl px-4 py-3">
-              <div class="lbl flex items-center gap-1.5">👤 User ID</div>
-              <input id="f-user" type="text" placeholder="optional" />
+
+            <div class="cell flex-1 rounded-2xl px-4 py-3 relative">
+              <div class="lbl flex items-center gap-1.5">👤 Search user</div>
+              <input id="f-user" type="text" placeholder="Type a name…" autocomplete="off" />
+              <div id="user-suggestions" class="suggest-box hidden"></div>
             </div>
             <div class="divider w-px bg-orange-100 my-3"></div>
 
             <div class="cell flex-1 rounded-2xl px-4 py-3">
               <div class="lbl flex items-center gap-1.5">📍 Latitude</div>
-              <input
-                id="f-lat"
-                type="number"
-                step="any"
-                placeholder="42.0000"
-              />
+              <input id="f-lat" type="number" step="any" placeholder="42.0000" />
             </div>
             <div class="divider w-px bg-orange-100 my-3"></div>
 
             <div class="cell flex-1 rounded-2xl px-4 py-3">
               <div class="lbl flex items-center gap-1.5">🌍 Longitude</div>
-              <input
-                id="f-lon"
-                type="number"
-                step="any"
-                placeholder="21.4300"
-              />
+              <input id="f-lon" type="number" step="any" placeholder="21.4300" />
             </div>
             <div class="divider w-px bg-orange-100 my-3"></div>
 
             <div class="cell flex-1 rounded-2xl px-4 py-3">
               <div class="lbl">Context</div>
               <select id="f-ctx">
-                <option value="">🕒 Auto</option>
+                <option value="general">🏛️ General</option>
                 <option value="breakfast">🥐 Breakfast</option>
                 <option value="lunch">🥗 Lunch</option>
-                <option value="general">🏛️ General</option>
                 <option value="dinner">🍽️ Dinner</option>
                 <option value="nightlife">🍸 Nightlife</option>
               </select>
@@ -382,72 +218,33 @@
 
             <div class="cell w-full md:w-32 rounded-2xl px-4 py-3">
               <div class="lbl">📏 Radius (km)</div>
-              <input
-                id="f-radius"
-                type="number"
-                step="0.1"
-                min="0.1"
-                value="1.0"
-              />
+              <input id="f-radius" type="number" step="0.1" min="0.1" value="1.0" />
             </div>
 
-            <button
-              id="f-go"
-              class="mt-2 md:mt-0 md:ml-2 bg-hubby-orange hover:bg-orange-600 text-white font-semibold rounded-2xl px-6 py-4 flex items-center justify-center gap-2 shadow-float transition"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2.5"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
+            <button id="f-go" class="mt-2 md:mt-0 md:ml-2 bg-hubby-orange hover:bg-orange-600 text-white font-semibold rounded-2xl px-6 py-4 flex items-center justify-center gap-2 shadow-float transition">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
               Search
             </button>
           </div>
         </div>
         <p class="text-center text-sm text-hubby-ink/60 mt-3">
-          💡 Leave coordinates empty to use your current location · Enter a User
-          ID to use their saved location
+          💡 Leave coordinates empty to use your current location · Search by user name to use their saved location
         </p>
       </section>
 
-      <!-- CONTENT -->
-      <section
-        id="results-section"
-        class="mt-12 grid grid-cols-1 md:grid-cols-5 gap-8"
-      >
-        <!-- MAP -->
-        <div class="md:col-span-2">
-          <div
-            id="map"
-            class="w-full h-[520px] md:h-[640px] shadow-card sticky top-24"
-          ></div>
-        </div>
+      <!-- MAP — full width, below search -->
+      <section class="mt-8">
+        <div id="map" class="w-full h-72 md:h-96 shadow-card"></div>
+      </section>
 
-        <!-- RESULTS -->
-        <div class="md:col-span-3">
-          <div
-            id="meta"
-            class="flex items-center justify-between mb-5 text-sm text-hubby-ink/70 font-medium"
-          ></div>
-          <div id="results" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
-          <div id="scroll-trigger" class="h-1"></div>
-          <div id="state" class="py-10"></div>
-          <div id="scroll-spinner" class="hidden py-8 flex justify-center">
-            <div class="spinner"></div>
-          </div>
-        </div>
+      <!-- RESULTS grid below the map -->
+      <section id="results-section" class="mt-10">
+        <div id="meta" class="flex items-center justify-between mb-5 text-sm text-hubby-ink/70 font-medium"></div>
+        <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+        <div id="state" class="py-10"></div>
       </section>
     </main>
 
-    <!-- Detail popover (single instance, repositioned on hover) -->
     <div id="detail-popover" class="detail-popover"></div>
 
     <footer class="relative z-10 text-center text-xs text-hubby-ink/50 pb-10">

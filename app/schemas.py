@@ -19,9 +19,7 @@ class ActivityResponse(BaseModel):
     working_hours: Optional[dict] = None
     created_at: datetime
     updated_at: datetime
-    # deleted_at intentionally omitted - internal field
 
-    # This lets Pydantic read directly from SQLAlchemy objects.
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -62,7 +60,6 @@ class UserResponse(BaseModel):
     longitude: float
     created_at: datetime
     updated_at: datetime
-    # deleted_at intentionally omitted — internal field
 
 
 class UserCreate(BaseModel):
@@ -106,13 +103,14 @@ class RecommendationItem(BaseModel):
     longitude: float
     distance_km: float
     is_open: bool
+    working_hours: Optional[dict] = None
     scores: ScoreBreakdown
     model_config = ConfigDict(from_attributes=True)
 
 
 class RecommendationResponse(BaseModel):
-    response_timestamp: str   # ISO 8601 with timezone
-    context: str               # "breakfast" | "lunch" | "dinner" | "nightlife" | "general"
+    response_timestamp: str
+    context: str
     radius_km: float
     user_latitude: float
     user_longitude: float

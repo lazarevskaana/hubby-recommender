@@ -25,33 +25,21 @@ router = APIRouter(prefix="/recommendations", tags=["recommendations"])
 
 
 def build_recommendations(
-    db: Session,
-    user_lat: float,
-    user_lon: float,
-    radius_km: float,
-    context: str | None,
-    limit: int,
-    offset: int = 0,
+        db: Session,
+        user_lat: float,
+        user_lon: float,
+        radius_km: float,
+        context: str | None,
+        limit: int,
+        offset: int = 0,
 ) -> RecommendationResponse:
-    """
-    The full recommendation pipeline:
-    1. Capture response timestamp
-    2. Resolve context (use given or infer from time)
-    3. Load activities (exclude soft-deleted)
-    4. Filter by distance
-    5. Filter by 'is open at response_timestamp'
-    6. Score each remaining activity
-    7. Sort by final score descending, take top `limit`
-    8. Build the response
-    """
     response_timestamp = datetime.now(timezone.utc).astimezone()
 
     try:
-        validated = validate_context(context)       # Predtoa vrakjase server error 500 a e 400 Bad Request.
+        validated = validate_context(context)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     resolved_context = validated if validated else infer_context(response_timestamp)
-
 
     activities = (
         db.query(Activity)
@@ -67,10 +55,6 @@ def build_recommendations(
         if is_open_at(activity.working_hours, response_timestamp)
     ]
 
-    # Hide activities that clearly don't match the requested context.
-    # Cafes during dinner (0.3) are kept; bridges, museums, hotels (0.0) are dropped.
-    # RELEVANCE_THRESHOLD = 0.3
-
     scored = []
     for activity, distance in open_nearby:
         scores = combined_score(
@@ -81,13 +65,13 @@ def build_recommendations(
             subtype=activity.subtype,
             context=resolved_context,
         )
-    
+
         if resolved_context != "general" and scores["category_relevance"] < RELEVANCE_THRESHOLD:
             continue
         scored.append((activity, distance, scores))
 
     scored.sort(key=lambda item: item[2]["final"], reverse=True)
-    top = scored[offset : offset + limit]
+    top = scored[offset: offset + limit]
 
     results = [
         RecommendationItem(
@@ -101,6 +85,7 @@ def build_recommendations(
             longitude=activity.longitude,
             distance_km=round(distance, 3),
             is_open=True,
+            working_hours=activity.working_hours,
             scores=ScoreBreakdown(
                 distance=round(scores["distance"], 3),
                 rating=round(scores["rating"], 3),
@@ -125,18 +110,13 @@ def build_recommendations(
 
 @router.get("/{user_id}", response_model=RecommendationResponse)
 def recommendations_for_user(
-    user_id: int,
-    db: Session = Depends(get_db),
-    radius_km: float = Query(DEFAULT_RADIUS_KM, gt=0, le=20),
-    context: str | None = Query(None),
-    limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
-    offset: int = Query(0, ge=0),
+        user_id: int,
+        db: Session = Depends(get_db),
+        radius_km: float = Query(DEFAULT_RADIUS_KM, gt=0, le=20),
+        context: str | None = Query(None),
+        limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+        offset: int = Query(0, ge=0),
 ):
-    """
-    Recommendations for a user already in the database.
-    Uses the user's stored latitude/longitude.
-    Returns 404 if the user_id doesn't exist (or is soft-deleted).
-    """
     user = (
         db.query(User)
         .filter(User.id == user_id, User.deleted_at.is_(None))
@@ -158,17 +138,14 @@ def recommendations_for_user(
 
 @router.get("", response_model=RecommendationResponse)
 def recommendations_by_coordinates(
-    db: Session = Depends(get_db),
-    lat: float = Query(..., ge=-90, le=90),
-    lon: float = Query(..., ge=-180, le=180),
-    radius_km: float = Query(DEFAULT_RADIUS_KM, gt=0, le=20),
-    context: str | None = Query(None),
-    limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
-    offset: int = Query(0, ge=0),
+        db: Session = Depends(get_db),
+        lat: float = Query(..., ge=-90, le=90),
+        lon: float = Query(..., ge=-180, le=180),
+        radius_km: float = Query(DEFAULT_RADIUS_KM, gt=0, le=20),
+        context: str | None = Query(None),
+        limit: int = Query(DEFAULT_LIMIT, ge=1, le=MAX_LIMIT),
+        offset: int = Query(0, ge=0),
 ):
-    """
-    Recommendations for an arbitrary point on the map.
-    """
     validate_coordinates(lat, lon)
 
     return build_recommendations(
