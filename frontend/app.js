@@ -180,7 +180,7 @@ function buildMapPopup(r) {
         ${hoursHtml}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <span style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:999px;background:#FFF5EC;color:#FF8800;">${fmtDist(r.distance_km)}</span>
-          <span style="font-size:13px;font-weight:700;color:#FF8800;">Score: ${pct}</span>
+          <span style="font-size:13px;font-weight:700;color:#FF8800;">Score: ${pct}%</span>
         </div>
       </div>
     </div>`;
@@ -228,7 +228,7 @@ function cardHTML(r, idx) {
       <div class="mt-4">
         <div class="flex items-center justify-between mb-1.5">
           <span class="text-xs uppercase tracking-wider text-hubby-ink/50 font-semibold">Final score</span>
-          <span class="font-display font-bold text-2xl text-hubby-orange">${pct}</span>
+          <span class="font-display font-bold text-2xl text-hubby-orange">${pct}%</span>
         </div>
         <div class="w-full bg-orange-50 rounded-full h-2">
           <div class="score-bar" style="width:${pct}%"></div>
@@ -282,7 +282,7 @@ function popoverHTML(r) {
       <div>
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs uppercase tracking-wider text-hubby-ink/50 font-bold">Recommendation score</span>
-          <span class="font-display font-extrabold text-3xl text-hubby-orange">${pct}</span>
+          <span class="font-display font-extrabold text-3xl text-hubby-orange">${pct}%</span>
         </div>
         <div class="w-full bg-orange-50 rounded-full h-2.5">
           <div class="score-bar" style="width:${pct}%"></div>
