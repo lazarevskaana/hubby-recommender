@@ -1,4 +1,6 @@
-# Project Setup Guide
+# Hubby Recommender — Setup Guide
+
+This guide walks you through running Hubby Recommender locally — from a fresh repo clone to seeing recommendations in your browser. Total setup time: about 10 minutes.
 
 ## Prerequisites
 
@@ -7,6 +9,7 @@ Make sure you have the following installed before starting:
 - **Python 3.11+**
 - **Docker Desktop** (running)
 - **Git**
+- **A modern web browser** (Chrome, Firefox, or Safari)
 
 ---
 
@@ -42,7 +45,7 @@ cp .env.example .env             # macOS / Linux
 # copy .env.example .env         # Windows
 ```
 
-Open `.env` and confirm the database credentials match the local Docker setup.
+The defaults in `.env.example` work for local development — no editing required.
 
 ### 5. Start the database
 
@@ -66,25 +69,27 @@ python drop_and_recreate_tables.py
 
 Type `yes` when prompted. This creates the `users` and `activities` tables.
 
-### 7. Populate the database (Week 3 pipeline)
+### 7. Populate the database
 
 Run these scripts in order:
 
 ```bash
-python preprocess_activities_tsv.py    # cleans the raw TSV → CSV
-python insert_activities.py            # loads activities into PostgreSQL
+python preprocess_activities_tsv.py    # cleans both raw TSV files → cleaned_activities.csv
+python insert_activities.py            # loads 206 activities into PostgreSQL
 python generate_dummy_users.py         # generates ~70 dummy users
 python insert_users.py                 # loads users into PostgreSQL
 python verify_data.py                  # sanity checks
 ```
 
-After this you should have ~153 activities and ~70 users in the database.
+After this you should have **206 activities** and **~70 users** in the database.
 
 ---
 
 ## Daily Workflow
 
-Every time you open the project, run these commands:
+To run the application, you need **two terminal windows** open at the same time — one for the backend, one for the frontend. Don't close either while you're using the app.
+
+### Terminal 1 — Backend
 
 ```bash
 # 1. Activate the virtual environment
@@ -104,15 +109,57 @@ docker compose up -d
 uvicorn app.main:app --reload
 ```
 
+Wait until you see `Application startup complete.` — then **leave this terminal alone**.
+
 The API will be available at: **http://localhost:8000**  
 Interactive docs (Swagger UI): **http://localhost:8000/docs**
+
+### Terminal 2 — Frontend
+
+Open a **new** terminal window (don't close the first one):
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+You should see `Serving HTTP on :: port 5500`.
+
+### Browser
+
+Open **http://localhost:5500** in your browser. Allow geolocation when prompted (or the app falls back to Skopje coordinates).
+
+You should see:
+- The orange "H" header at the top
+- The "Where to next?" hero heading
+- A search bar with five inputs and a Search button
+- An interactive map on the left
+- Recommendation cards on the right
+
+---
+
+## Verifying Everything Works
+
+After both servers are running, test these:
+
+| Check | Expected result |
+|---|---|
+| Open `http://localhost:8000/health/db` | `{"status":"ok","database":"connected"}` |
+| Open `http://localhost:8000/docs` | Swagger UI with all endpoints listed |
+| Run `SELECT COUNT(*) FROM activities;` in DBeaver | `206` |
+| Change context dropdown from Auto to Dinner | Cards re-rank — restaurants/bars climb to the top |
+| Hover any card | Detail view appears with "Open in Google Maps" button |
+| Click an orange pin on the map | Polished popup with name, rating, score |
 
 ---
 
 ## Stopping the Project
 
 ```bash
-# Stop the API server
+# Stop the API server (in Terminal 1)
+Ctrl + C
+
+# Stop the frontend (in Terminal 2)
 Ctrl + C
 
 # Stop the database container (data is preserved)
@@ -131,13 +178,13 @@ Only do this if you want to start completely fresh.
 
 ## Resetting the Database
 
-If the schema changes (`app/models.py` is modified) or you want to start with clean data:
+If the schema changes (`app/models.py` is modified) or you want clean data:
 
 ```bash
 python drop_and_recreate_tables.py
 ```
 
-This drops all tables and recreates them with the latest schema. You'll need to re-run the data population scripts afterwards (preprocess → insert activities → generate users → insert users).
+This drops all tables and recreates them. You'll need to re-run the data population scripts afterwards (preprocess → insert activities → generate users → insert users).
 
 ---
 
@@ -157,6 +204,43 @@ For visual database inspection, connect DBeaver with these settings:
 
 ## Common Issues
 
+### "Address already in use" (port 8000 or 5500)
+
+A previous server is still running and holding the port. Kill it:
+
+```bash
+lsof -ti:8000 | xargs kill -9      # for the backend
+lsof -ti:5500 | xargs kill -9      # for the frontend
+```
+
+This happens when a terminal window is closed without first pressing `Ctrl+C`. To avoid it next time, always stop the server cleanly with `Ctrl+C` before closing the window.
+
+### Frontend shows a directory listing instead of the app
+
+You ran `python -m http.server` from the wrong folder. Stop it with `Ctrl+C`, then:
+
+```bash
+cd frontend
+python -m http.server 5500
+```
+
+The `cd frontend` step is essential — `index.html` lives inside that folder.
+
+### Page loads but cards say "Could not reach the API"
+
+The backend isn't running. Check Terminal 1 — if you see `Shutting down` then it was killed. Restart it with `uvicorn app.main:app --reload` and leave the terminal alone.
+
+To verify the backend is up independently, open `http://localhost:8000/health/db` in a new browser tab. You should see a JSON response confirming the connection.
+
+### Browser shows old behavior / changes don't appear
+
+The browser cached the previous version of the JavaScript. Hard refresh:
+
+- **macOS:** `Cmd + Shift + R`
+- **Windows/Linux:** `Ctrl + Shift + R`
+
+If that doesn't work, open DevTools (`Cmd+Option+I` / `F12`), right-click the refresh button, and choose **"Empty Cache and Hard Reload"**.
+
 ### Port 5432 already in use
 
 Something else is running on port 5432 — usually a local PostgreSQL installation.
@@ -169,6 +253,17 @@ brew services stop postgresql
 **Windows:** Open Services (Win+R → `services.msc`), find any PostgreSQL service, right-click → Stop.
 
 Alternatively, change the port in `docker-compose.yml` from `"5432:5432"` to `"5433:5432"` and update `DATABASE_URL` in `.env` to use port 5433.
+
+### Database stuck at 153 activities instead of 206
+
+You skipped the data population scripts. Each teammate has their own local database — running the scripts is required on every machine. Run them again:
+
+```bash
+python preprocess_activities_tsv.py
+python insert_activities.py
+```
+
+You should see `Inserted: 53, Skipped: 153` or similar.
 
 ### Virtual environment not activated
 
@@ -192,14 +287,6 @@ docker compose logs
 
 On macOS/Linux, use `python3`. On Windows, use `python`.
 
-### GitHub authentication fails
-
-If `git push` returns a 403 error, you may be authenticated as the wrong GitHub account. Switch with:
-
-```bash
-gh auth switch
-```
-
 ---
 
 ## Project Structure
@@ -208,24 +295,44 @@ gh auth switch
 hubby-recommender/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                          # FastAPI application
-│   ├── database.py                      # SQLAlchemy connection setup
-│   └── models.py                        # User and Activity models
+│   ├── main.py                      # FastAPI entry, CORS, router registration
+│   ├── database.py                  # SQLAlchemy session factory
+│   ├── models.py                    # User and Activity models
+│   ├── schemas.py                   # Pydantic schemas for API I/O
+│   ├── recommendations_config.py    # Scoring weights, time windows, category map
+│   ├── routers/
+│   │   ├── activities.py            # Activity API endpoints
+│   │   ├── users.py                 # User API endpoints (incl. GET /users/{id})
+│   │   └── recommendations.py       # Recommendations API endpoints + pipeline
+│   └── services/
+│       ├── geo.py                   # Haversine, radius filtering
+│       ├── opening_hours.py         # is_open_at check
+│       ├── context.py               # Time-of-day inference
+│       └── scoring.py               # The four sub-scores + final score
 ├── data/
-│   ├── unique_activities.tsv            # raw Google Places data (committed)
-│   ├── cleaned_activities.csv           # output of preprocessing (gitignored)
-│   └── dummy_users.csv                  # output of user generation (gitignored)
-├── .env.example                         # environment variable template
-├── .env                                 # local config (gitignored)
+│   ├── unique_activities.tsv        # Original raw dataset (153 rows)
+│   ├── uniques_activities_2.tsv     # Week 6 expansion (53 rows)
+│   ├── cleaned_activities.csv       # Output of preprocessing (gitignored)
+│   └── dummy_users.csv              # Output of user generation (gitignored)
+├── frontend 
+│   ├── index.html                   # Single-page app with embedded styles
+│   └── app.js                       # Fetch, render, Leaflet, hover popover
+├── docs/
+│   ├── screenshot_landing.png       # README screenshot
+│   ├── screenshot_hover.png         # README screenshot
+│   ├── team_documentation_en.pdf    # Full technical docs (English)
+│   └── team_documentation_mk.pdf    # Full technical docs (Macedonian)
+├── .env.example                     # Environment variable template
+├── .env                             # Local config (gitignored)
 ├── .gitignore
-├── docker-compose.yml                   # PostgreSQL container definition
-├── requirements.txt                     # Python dependencies
-├── drop_and_recreate_tables.py          # database schema reset
-├── preprocess_activities_tsv.py         # raw → clean data
-├── insert_activities.py                 # load activities into DB
-├── generate_dummy_users.py              # create ~70 fake users
-├── insert_users.py                      # load users into DB
-├── verify_data.py                       # sanity checks
-├── README.md
-└── SETUP.md
-```
+├── docker-compose.yml               # PostgreSQL container definition
+├── requirements.txt                 # Python dependencies
+├── drop_and_recreate_tables.py
+├── preprocess_activities_tsv.py
+├── insert_activities.py
+├── generate_dummy_users.py
+├── insert_users.py
+├── verify_data.py
+├── README.md                        # Public-facing project overview
+└── SETUP.md                         # This file
+``````
