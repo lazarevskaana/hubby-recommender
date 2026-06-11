@@ -83,13 +83,6 @@
         line-height: 1.2;
       }
 
-      .rec-card .sub-pill {
-        max-width: 100%;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-
       .detail-popover {
         position: fixed; z-index: 200; width: 380px;
         background: white; border-radius: 24px;
@@ -104,9 +97,7 @@
       .spinner { width: 34px; height: 34px; border-radius: 9999px; border: 3px solid #ffe2c2; border-top-color: #ff8800; animation: spin 0.9s linear infinite; }
       @keyframes spin { to { transform: rotate(360deg); } }
 
-      /* Map full width, below the search bar */
       #map { border-radius: 20px; width: 100%; }
-
       .leaflet-popup-content-wrapper { border-radius: 16px; padding: 0; box-shadow: 0 12px 32px -8px rgba(45,55,72,0.25); border: 1px solid rgba(255,136,0,0.15); }
       .leaflet-popup-content { margin: 0; font-family: "Inter", sans-serif; color: #2d3748; width: 240px !important; }
       .leaflet-popup-tip { background: white; }
@@ -115,7 +106,6 @@
       .marker-user { background: #2d3748; color: #fff; }
       .marker-act  { background: #ff8800; color: #fff; }
 
-      /* User suggestions dropdown — must sit above the map */
       .suggest-box {
         position: absolute;
         top: calc(100% + 4px);
@@ -126,13 +116,26 @@
         border: 1px solid #FFE0B2;
         overflow: hidden;
         z-index: 10000;
-
       }
       .suggest-item { padding: 10px 16px; cursor: pointer; font-size: 14px; color: #2D3748; transition: background 0.15s ease; display: flex; align-items: center; }
       .suggest-item:hover { background: #FFF5EC; }
 
-      /* Search bar sits above map via z-index */
       #search-section { position: relative; z-index: 10000; }
+
+      /* === ADDITIONS TO REMOVE GAP AFTER CARDS === */
+      #state:empty {
+        display: none;
+      }
+      #results {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+      }
+      #load-more-container {
+        margin-top: 12px !important;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .animate-spin { animation: spin 0.8s linear infinite; }
 
       @media (max-width: 768px) {
         .search-row { flex-direction: column; }
@@ -152,7 +155,7 @@
     <header class="glass sticky top-0 z-40 border-b border-orange-100/60">
       <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
         <div class="flex items-center gap-3">
-      <img src="images/logo.webp" alt="Hubby logo" class="w-10 h-10 rounded-xl object-cover shadow-float" />
+          <img src="images/logo.webp" alt="Hubby logo" class="w-10 h-10 rounded-xl object-cover shadow-float" />
           <div class="leading-tight">
             <div class="font-display font-bold text-lg text-hubby-ink">Hubby Recommender</div>
             <div class="text-xs text-hubby-ink/60">Discover what's around, right when it matters.</div>
@@ -166,7 +169,6 @@
     </header>
 
     <main class="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
-
       <!-- HERO -->
       <section class="text-center max-w-3xl mx-auto">
         <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100/70 text-hubby-orange text-xs font-semibold mb-6">
@@ -180,11 +182,10 @@
         </p>
       </section>
 
-      <!-- SEARCH BAR — z-index above map so dropdown shows over it -->
+      <!-- SEARCH BAR -->
       <section id="search-section" class="mt-10 max-w-5xl mx-auto">
         <div class="bg-white rounded-3xl shadow-float p-2 md:p-3">
           <div class="search-row flex items-stretch gap-0">
-
             <div class="cell flex-1 rounded-2xl px-4 py-3 relative">
               <div class="lbl flex items-center gap-1.5">👤 Search user</div>
               <input id="f-user" type="text" placeholder="Type a name…" autocomplete="off" />
@@ -232,15 +233,23 @@
         </p>
       </section>
 
-      <!-- MAP — full width, below search -->
+      <!-- MAP -->
       <section class="mt-8">
         <div id="map" class="w-full h-72 md:h-96 shadow-card"></div>
       </section>
 
-      <!-- RESULTS grid below the map -->
+      <!-- RESULTS GRID + LOAD MORE BUTTON -->
       <section id="results-section" class="mt-10">
         <div id="meta" class="flex items-center justify-between mb-5 text-sm text-hubby-ink/70 font-medium"></div>
         <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
+        <div id="load-more-container" class="text-center hidden">
+          <button id="load-more-btn" class="bg-hubby-orange hover:bg-orange-600 text-white font-semibold rounded-2xl px-8 py-4 flex items-center justify-center gap-2 shadow-float transition mx-auto">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Load more recommendations
+          </button>
+        </div>
         <div id="state" class="py-10"></div>
       </section>
     </main>

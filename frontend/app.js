@@ -1,6 +1,6 @@
 const API = 'http://localhost:8000';
 const FALLBACK = { lat: 42.0, lon: 21.43 };
-const MAX_LIMIT = 200;
+const PAGE_SIZE = 12;
 
 const el = (id) => document.getElementById(id);
 const fUser   = el('f-user');
@@ -14,12 +14,23 @@ const metaEl    = el('meta');
 const stateEl   = el('state');
 const popoverEl = el('detail-popover');
 const userSuggestEl = el('user-suggestions');
+const loadMoreContainer = el('load-more-container');
+const loadMoreBtn = el('load-more-btn');
 
 let map, userMarker = null, actMarkers = [];
-let lastResults = [];
+let allResults = [];
 let allUsers = [];
 
-// ── Helpers ─────────────────────────────────────────────────────────
+let currentOffset = 0;
+let isLoading = false;
+let hasMore = true;
+let currentContext = 'general';
+let currentRadius = '1.0';
+let currentUserId = null;
+let currentLat = null;
+let currentLon = null;
+
+// ---------- Helpers ----------
 function humanize(s) {
   if (!s) return '';
   return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
@@ -58,23 +69,14 @@ function googleMapsUrl(r) {
   return `https://www.google.com/maps/search/?api=1&query=${r.latitude},${r.longitude}`;
 }
 
-// ── Today's working hours ────────────────────────────────────────────
-// working_hours is an object like:
-// { monday: [{open:"09:00", close:"23:00"}], tuesday: [...], ... }
-// Some days may be null (no data), [] (closed), or missing.
 const DAY_NAMES = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 
 function getTodayHours(workingHours) {
   if (!workingHours || typeof workingHours !== 'object') return null;
   const today = DAY_NAMES[new Date().getDay()];
   const slots = workingHours[today];
-
-  // null = no data available
   if (slots === null || slots === undefined) return null;
-
-  // empty array = closed today
   if (Array.isArray(slots) && slots.length === 0) return { label: 'Closed today', closed: true };
-
   if (Array.isArray(slots) && slots.length > 0) {
     const times = slots.map(s => `${s.open}–${s.close}`).join(', ');
     return { label: times, closed: false };
@@ -82,13 +84,13 @@ function getTodayHours(workingHours) {
   return null;
 }
 
-// ── User name autocomplete ───────────────────────────────────────────
+// ---------- User autocomplete ----------
 async function loadAllUsers() {
   try {
     const res = await fetch(`${API}/users?limit=100`);
     if (!res.ok) return;
     allUsers = await res.json();
-  } catch(e) { /* silently fail */ }
+  } catch(e) {}
 }
 
 function showUserSuggestions(query) {
@@ -101,13 +103,11 @@ function showUserSuggestions(query) {
   const matches = allUsers.filter(u =>
     `${u.name} ${u.surname}`.toLowerCase().includes(q)
   ).slice(0, 8);
-
   if (matches.length === 0) {
     userSuggestEl.innerHTML = '';
     userSuggestEl.classList.add('hidden');
     return;
   }
-
   userSuggestEl.innerHTML = matches.map(u => `
     <div class="suggest-item" data-id="${u.id}" data-lat="${u.latitude}" data-lon="${u.longitude}">
       <span class="font-semibold">${u.name} ${u.surname}</span>
@@ -115,7 +115,6 @@ function showUserSuggestions(query) {
     </div>
   `).join('');
   userSuggestEl.classList.remove('hidden');
-
   userSuggestEl.querySelectorAll('.suggest-item').forEach(item => {
     item.addEventListener('click', () => {
       fUser.value = item.querySelector('.font-semibold').textContent;
@@ -130,7 +129,7 @@ function showUserSuggestions(query) {
   });
 }
 
-// ── Map init ──────────────────────────────────────────────────────────
+// ---------- Map ----------
 map = L.map('map', { zoomControl: true }).setView([FALLBACK.lat, FALLBACK.lon], 14);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap', maxZoom: 19,
@@ -164,7 +163,6 @@ function buildMapPopup(r) {
   const hoursHtml = todayHrs
     ? `<div style="font-size:11px;color:${todayHrs.closed ? '#EF4444' : '#6B7280'};margin-bottom:8px;">🕐 ${todayHrs.label}</div>`
     : '';
-
   return `
     <div style="padding:0;">
       <div style="background:linear-gradient(135deg,#FF8800 0%,#FFB347 100%);padding:10px 14px;color:white;">
@@ -175,7 +173,7 @@ function buildMapPopup(r) {
         <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B7280;margin-bottom:8px;">
           <span style="color:#FFB347;">${stars(r.rating)}</span>
           <span style="font-weight:600;color:#2D3748;">${(r.rating ?? 0).toFixed(1)}</span>
-          <span>· ${r.user_rating_count ?? 0} reviews</span>
+          <span> · ${r.user_rating_count ?? 0} reviews</span>
         </div>
         ${hoursHtml}
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -186,7 +184,7 @@ function buildMapPopup(r) {
     </div>`;
 }
 
-// ── Card HTML ─────────────────────────────────────────────────────────
+// ---------- Card HTML ----------
 function cardHTML(r, idx) {
   const emoji = subtypeEmoji(r.subtype || r.type);
   const subLabel = humanize(r.subtype || r.type || 'place');
@@ -198,13 +196,11 @@ function cardHTML(r, idx) {
     ['Rating',     r.scores.rating],
     ['Popularity', r.scores.popularity],
   ] : [];
-
   const hoursHtml = todayHrs
     ? `<div class="mt-1 flex items-center gap-1 text-xs font-medium ${todayHrs.closed ? 'text-red-500' : 'text-hubby-ink/60'}">
          <span>🕐</span><span>${todayHrs.label}</span>
        </div>`
     : '';
-
   return `
   <article class="rec-card bg-white rounded-3xl overflow-hidden shadow-card" data-idx="${idx}">
     <div class="relative h-14 bg-gradient-to-br from-orange-50 to-orange-100 flex items-center px-4">
@@ -249,7 +245,7 @@ function cardHTML(r, idx) {
   </article>`;
 }
 
-// ── Popover HTML ──────────────────────────────────────────────────────
+// ---------- Popover ----------
 function popoverHTML(r) {
   const emoji = subtypeEmoji(r.subtype || r.type);
   const subLabel = humanize(r.subtype || r.type || 'place');
@@ -262,7 +258,6 @@ function popoverHTML(r) {
          <span>🕐</span><span>${todayHrs.label}</span>
        </div>`
     : '';
-
   return `
     <div class="bg-gradient-to-br from-hubby-orange to-hubby-yellow text-white px-6 py-5">
       <div class="text-xs font-bold uppercase tracking-wider opacity-90 mb-1">${emoji} ${subLabel}</div>
@@ -315,7 +310,6 @@ function popoverHTML(r) {
     </div>`;
 }
 
-// ── Popover positioning ───────────────────────────────────────────────
 function positionPopover(cardEl) {
   const rect = cardEl.getBoundingClientRect();
   const pw = 380, margin = 12;
@@ -347,114 +341,241 @@ popoverEl.addEventListener('mouseleave', hidePopover);
 function attachCardHovers() {
   document.querySelectorAll('.rec-card').forEach(card => {
     const idx = parseInt(card.dataset.idx, 10);
-    card.addEventListener('mouseenter', () => { const item = lastResults[idx]; if (item) showPopover(card, item); });
+    card.addEventListener('mouseenter', () => { const item = allResults[idx]; if (item) showPopover(card, item); });
     card.addEventListener('mouseleave', hidePopover);
   });
 }
 
-// ── Render results ────────────────────────────────────────────────────
-function renderResults(data) {
-  const items = data.results || [];
-  lastResults = items;
-
-  if (items.length === 0) {
-    stateEl.innerHTML = `<div class="bg-orange-50/60 border border-orange-100 rounded-3xl p-8 text-center">
-      <div class="text-4xl mb-2">🌴</div>
-      <div class="font-display font-bold text-xl text-hubby-ink">No places open right now</div>
-      <div class="text-hubby-ink/60 mt-1">Try a wider radius or a different context.</div>
-    </div>`;
-    metaEl.innerHTML = '';
-    resultsEl.innerHTML = '';
-    clearMarkers();
-    return;
+// ---------- Pagination UI helpers ----------
+function showLoading() {
+  if (loadMoreBtn) {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="animate-spin">
+      <path d="M21 12a9 9 0 1 1-6.2-8.5"/>
+    </svg>
+    Loading...`;
   }
-
-  resultsEl.innerHTML = '';
-  clearMarkers();
-
-  const lat = data.user_latitude ?? parseFloat(fLat.value);
-  const lon = data.user_longitude ?? parseFloat(fLon.value);
-  if (!isNaN(lat) && !isNaN(lon)) {
-    setUserMarker(lat, lon);
-    map.setView([lat, lon], 14);
-    setTimeout(() => map.invalidateSize(), 50);
-  }
-
-  metaEl.innerHTML = `
-    <div>Showing <span class="font-bold text-hubby-ink">${items.length}</span> recommendations
-      <span class="text-hubby-ink/40">·</span>
-      context: <span class="font-semibold text-hubby-orange">${data.context}</span>
-    </div>
-    <div class="text-xs text-hubby-ink/50">radius ${data.radius_km}km</div>`;
-
-  resultsEl.insertAdjacentHTML('beforeend', items.map((r, idx) => cardHTML(r, idx)).join(''));
-  attachCardHovers();
-
-  items.forEach(r => {
-    if (r.latitude && r.longitude) {
-      const m = L.marker([r.latitude, r.longitude], { icon: pinIcon('act', subtypeEmoji(r.subtype || r.type)) })
-        .bindPopup(buildMapPopup(r), { maxWidth: 260, className: 'hubby-popup' })
-        .addTo(map);
-      actMarkers.push(m);
-    }
-  });
-  stateEl.innerHTML = '';
 }
 
-// ── Fetch user by ID ──────────────────────────────────────────────────
+function hideLoading() {
+  if (loadMoreBtn && !isLoading && hasMore) {
+    loadMoreBtn.disabled = false;
+    loadMoreBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M5 12h14"/>
+    </svg>
+    Load more recommendations`;
+  }
+}
+
+function updateLoadMoreButton() {
+  if (hasMore && !isLoading && allResults.length > 0) {
+    loadMoreContainer.classList.remove('hidden');
+  } else {
+    loadMoreContainer.classList.add('hidden');
+  }
+}
+
+// ---------- API calls ----------
+async function fetchRecommendations(offset) {
+  const urlParams = new URLSearchParams({
+    radius_km: currentRadius,
+    limit: PAGE_SIZE,
+    offset: offset,
+  });
+  if (currentContext && currentContext !== 'general') urlParams.set('context', currentContext);
+
+  let url;
+  if (currentUserId) {
+    url = `${API}/recommendations/${encodeURIComponent(currentUserId)}?${urlParams}`;
+  } else {
+    urlParams.set('lat', currentLat);
+    urlParams.set('lon', currentLon);
+    url = `${API}/recommendations?${urlParams}`;
+  }
+
+  console.log(`Fetching offset=${offset}`, url);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  console.log(`Received ${data.results?.length || 0} items`);
+  return data;
+}
+
+async function loadMore() {
+  if (isLoading || !hasMore) return;
+  isLoading = true;
+  showLoading();
+
+  try {
+    const data = await fetchRecommendations(currentOffset);
+    const newItems = data.results || [];
+
+    if (newItems.length === 0) {
+      hasMore = false;
+    } else {
+      const startIdx = allResults.length;
+      const cardsHtml = newItems.map((item, i) => cardHTML(item, startIdx + i)).join('');
+      resultsEl.insertAdjacentHTML('beforeend', cardsHtml);
+
+      newItems.forEach(item => {
+        if (item.latitude && item.longitude) {
+          const m = L.marker([item.latitude, item.longitude], { icon: pinIcon('act', subtypeEmoji(item.subtype || item.type)) })
+            .bindPopup(buildMapPopup(item), { maxWidth: 260, className: 'hubby-popup' })
+            .addTo(map);
+          actMarkers.push(m);
+        }
+      });
+
+      attachCardHovers();
+      allResults.push(...newItems);
+      currentOffset += PAGE_SIZE;
+      hasMore = newItems.length === PAGE_SIZE;
+
+      metaEl.innerHTML = `
+        <div>Showing <span class="font-bold text-hubby-ink">${allResults.length}</span> recommendations
+          <span class="text-hubby-ink/40">·</span>
+          context: <span class="font-semibold text-hubby-orange">${currentContext}</span>
+        </div>
+        <div class="text-xs text-hubby-ink/50">radius ${currentRadius}km</div>`;
+    }
+  } catch (err) {
+    console.error(err);
+    stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center">
+      <div class="text-2xl mb-1">⚠️</div>
+      <div class="font-semibold text-red-700">Failed to load: ${err.message}</div>
+    </div>`;
+  } finally {
+    isLoading = false;
+    hideLoading();
+    updateLoadMoreButton();
+    if (!hasMore) {
+      loadMoreContainer.innerHTML = '<div class="text-hubby-ink/50 text-sm py-4">✨ No more places to show ✨</div>';
+    }
+  }
+}
+
+async function initialSearch() {
+  isLoading = false;
+  hasMore = true;
+  currentOffset = 0;
+  allResults = [];
+  resultsEl.innerHTML = '';
+  clearMarkers();
+  metaEl.innerHTML = '';
+  stateEl.innerHTML = '';
+  popoverEl.classList.remove('visible');
+  loadMoreContainer.classList.add('hidden');
+
+  stateEl.innerHTML = `<div class="flex flex-col items-center gap-3 py-10"><div class="spinner"></div><div class="text-hubby-ink/70 font-medium">Loading recommendations…</div></div>`;
+
+  try {
+    const data = await fetchRecommendations(0);
+    const items = data.results || [];
+
+    if (items.length === 0) {
+      stateEl.innerHTML = `<div class="bg-orange-50/60 border border-orange-100 rounded-3xl p-8 text-center">
+        <div class="text-4xl mb-2">🌴</div>
+        <div class="font-display font-bold text-xl text-hubby-ink">No places open right now</div>
+        <div class="text-hubby-ink/60 mt-1">Try a wider radius or a different context.</div>
+      </div>`;
+      return;
+    }
+
+    resultsEl.innerHTML = '';
+    clearMarkers();
+
+    const lat = data.user_latitude ?? currentLat;
+    const lon = data.user_longitude ?? currentLon;
+    if (!isNaN(lat) && !isNaN(lon)) {
+      setUserMarker(lat, lon);
+      map.setView([lat, lon], 14);
+      setTimeout(() => map.invalidateSize(), 50);
+    }
+
+    const cardsHtml = items.map((r, idx) => cardHTML(r, idx)).join('');
+    resultsEl.insertAdjacentHTML('beforeend', cardsHtml);
+    items.forEach(r => {
+      if (r.latitude && r.longitude) {
+        const m = L.marker([r.latitude, r.longitude], { icon: pinIcon('act', subtypeEmoji(r.subtype || r.type)) })
+          .bindPopup(buildMapPopup(r), { maxWidth: 260, className: 'hubby-popup' })
+          .addTo(map);
+        actMarkers.push(m);
+      }
+    });
+    attachCardHovers();
+
+    allResults = items;
+    currentOffset = PAGE_SIZE;
+    hasMore = items.length === PAGE_SIZE;
+
+    metaEl.innerHTML = `
+      <div>Showing <span class="font-bold text-hubby-ink">${items.length}</span> recommendations
+        <span class="text-hubby-ink/40">·</span>
+        context: <span class="font-semibold text-hubby-orange">${data.context}</span>
+      </div>
+      <div class="text-xs text-hubby-ink/50">radius ${data.radius_km}km</div>`;
+    stateEl.innerHTML = '';
+
+    updateLoadMoreButton();
+  } catch (err) {
+    console.error(err);
+    stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center">
+      <div class="text-2xl mb-1">⚠️</div>
+      <div class="font-semibold text-red-700">Failed to load recommendations: ${err.message}</div>
+    </div>`;
+  }
+}
+
+// ---------- Search ----------
+async function search() {
+  currentUserId = fUser.dataset.selectedId || null;
+  currentRadius = fRadius.value || '1.0';
+  currentContext = fCtx.value;
+
+  if (currentUserId) {
+    try {
+      const userData = await fetchUserCoords(currentUserId);
+      if (userData.latitude != null) {
+        currentLat = userData.latitude;
+        currentLon = userData.longitude;
+        fLat.value = currentLat.toFixed(6);
+        fLon.value = currentLon.toFixed(6);
+        fLat.disabled = true;
+        fLon.disabled = true;
+      }
+    } catch (e) {
+      stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center">
+        <div class="text-2xl mb-1">⚠️</div>
+        <div class="font-semibold text-red-700">${e.message}</div>
+      </div>`;
+      return;
+    }
+  } else {
+    currentLat = parseFloat(fLat.value);
+    currentLon = parseFloat(fLon.value);
+    if (isNaN(currentLat) || isNaN(currentLon)) {
+      stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center">
+        <div class="text-2xl mb-1">⚠️</div>
+        <div class="font-semibold text-red-700">Please enter valid coordinates or select a user</div>
+      </div>`;
+      return;
+    }
+  }
+
+  await initialSearch();
+}
+
 async function fetchUserCoords(userId) {
   const res = await fetch(`${API}/users/${encodeURIComponent(userId)}`);
   if (!res.ok) throw new Error(res.status === 404 ? 'User not found' : `HTTP ${res.status}`);
   return await res.json();
 }
 
-// ── Main search ───────────────────────────────────────────────────────
-async function search() {
-  stateEl.innerHTML = `<div class="flex flex-col items-center gap-3 py-10"><div class="spinner"></div><div class="text-hubby-ink/70 font-medium">Loading recommendations…</div></div>`;
-  resultsEl.innerHTML = '';
-  clearMarkers();
-  popoverEl.classList.remove('visible');
-
-  const selectedUserId = fUser.dataset.selectedId;
-  const radius = fRadius.value || '1.0';
-  const ctx = fCtx.value;
-
-  if (selectedUserId) {
-    try {
-      const userData = await fetchUserCoords(selectedUserId);
-      if (userData.latitude != null) { fLat.value = userData.latitude.toFixed(6); fLon.value = userData.longitude.toFixed(6); }
-    } catch (e) {
-      stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center"><div class="text-2xl mb-1">⚠️</div><div class="font-semibold text-red-700">${e.message}</div></div>`;
-      return;
-    }
-  }
-
-  const params = new URLSearchParams({ radius_km: radius, limit: MAX_LIMIT });
-  if (ctx) params.set('context', ctx);
-
-  let url;
-  if (selectedUserId) {
-    url = `${API}/recommendations/${encodeURIComponent(selectedUserId)}?${params}`;
-  } else {
-    params.set('lat', fLat.value);
-    params.set('lon', fLon.value);
-    url = `${API}/recommendations?${params}`;
-  }
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    renderResults(await res.json());
-  } catch (e) {
-    console.error(e);
-    stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center"><div class="text-2xl mb-1">⚠️</div><div class="font-semibold text-red-700">Could not reach the API (${e.message}). Is uvicorn running at ${API}?</div></div>`;
-  }
-}
-
-// ── Event listeners ───────────────────────────────────────────────────
+// ---------- Event listeners ----------
 fGo.addEventListener('click', search);
 [fLat, fLon, fRadius].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') search(); }));
 fCtx.addEventListener('change', search);
+loadMoreBtn.addEventListener('click', loadMore);
 
 fUser.addEventListener('input', () => {
   delete fUser.dataset.selectedId;
@@ -471,10 +592,17 @@ document.addEventListener('click', e => {
 });
 window.addEventListener('scroll', () => popoverEl.classList.remove('visible'), { passive: true });
 
-// ── Bootstrap ─────────────────────────────────────────────────────────
+// ---------- Bootstrap ----------
 function bootstrap(lat, lon) {
   fLat.value = lat.toFixed(6);
   fLon.value = lon.toFixed(6);
+  currentLat = lat;
+  currentLon = lon;
+  currentUserId = null;
+  fUser.value = '';
+  delete fUser.dataset.selectedId;
+  fLat.disabled = false;
+  fLon.disabled = false;
   setUserMarker(lat, lon);
   map.setView([lat, lon], 14);
   search();
