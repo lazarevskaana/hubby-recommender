@@ -52,8 +52,6 @@ def popularity_score(user_rating_count: int | None) -> float:
 def category_relevance(subtype: str | None, context: str) -> float:
     if subtype is None:
         return 0.0
-    if context == "general":
-        return DEFAULT_RELEVANCE_GENERAL
     return CATEGORY_RELEVANCE.get(context, {}).get(subtype, DEFAULT_RELEVANCE_UNKNOWN)
 
 

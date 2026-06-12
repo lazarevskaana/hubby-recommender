@@ -14,8 +14,9 @@ const metaEl    = el('meta');
 const stateEl   = el('state');
 const popoverEl = el('detail-popover');
 const userSuggestEl = el('user-suggestions');
-const loadMoreContainer = el('load-more-container');
-const loadMoreBtn = el('load-more-btn');
+const sentinelEl = el('infinite-sentinel');
+const loaderEl   = el('infinite-loader');
+const endEl      = el('infinite-end');
 
 let map, userMarker = null, actMarkers = [];
 let allResults = [];
@@ -24,6 +25,7 @@ let allUsers = [];
 let currentOffset = 0;
 let isLoading = false;
 let hasMore = true;
+let totalAvailable = 0;
 let currentContext = 'general';
 let currentRadius = '1.0';
 let currentUserId = null;
@@ -338,41 +340,50 @@ function hidePopover() {
 popoverEl.addEventListener('mouseenter', () => clearTimeout(popoverHideTimer));
 popoverEl.addEventListener('mouseleave', hidePopover);
 
-function attachCardHovers() {
-  document.querySelectorAll('.rec-card').forEach(card => {
+// Only attach hover listeners to cards from fromIdx onward,
+// so previously rendered cards don't get duplicate listeners.
+function attachCardHovers(fromIdx) {
+  const cards = resultsEl.querySelectorAll('.rec-card');
+  for (let i = fromIdx; i < cards.length; i++) {
+    const card = cards[i];
     const idx = parseInt(card.dataset.idx, 10);
     card.addEventListener('mouseenter', () => { const item = allResults[idx]; if (item) showPopover(card, item); });
     card.addEventListener('mouseleave', hidePopover);
-  });
-}
-
-// ---------- Pagination UI helpers ----------
-function showLoading() {
-  if (loadMoreBtn) {
-    loadMoreBtn.disabled = true;
-    loadMoreBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="animate-spin">
-      <path d="M21 12a9 9 0 1 1-6.2-8.5"/>
-    </svg>
-    Loading...`;
   }
 }
 
-function hideLoading() {
-  if (loadMoreBtn && !isLoading && hasMore) {
-    loadMoreBtn.disabled = false;
-    loadMoreBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 5v14M5 12h14"/>
-    </svg>
-    Load more recommendations`;
-  }
+function renderMeta() {
+  const shown = totalAvailable || allResults.length;
+  metaEl.innerHTML = `
+    <div>Showing <span class="font-bold text-hubby-ink">${shown}</span> recommendations
+      <span class="text-hubby-ink/40">·</span>
+      context: <span class="font-semibold text-hubby-orange">${currentContext}</span>
+    </div>
+    <div class="text-xs text-hubby-ink/50">radius ${currentRadius}km</div>`;
 }
 
-function updateLoadMoreButton() {
-  if (hasMore && !isLoading && allResults.length > 0) {
-    loadMoreContainer.classList.remove('hidden');
-  } else {
-    loadMoreContainer.classList.add('hidden');
-  }
+function showLoading() { loaderEl.classList.remove('hidden'); }
+function hideLoading() { loaderEl.classList.add('hidden'); }
+function updateEndMarker() {
+  endEl.classList.toggle('hidden', hasMore || allResults.length === 0);
+}
+
+// ---------- Infinite scroll (IntersectionObserver on the sentinel) ----------
+// The sentinel div sits below the results grid. The observer fires only when
+// the sentinel actually approaches the viewport (within 200px), so new pages
+// load right before the user reaches the bottom — not from mid-page.
+let observer = null;
+
+function startObserving() {
+  if (observer) return;
+  observer = new IntersectionObserver((entries) => {
+    if (entries[0].isIntersecting && hasMore && !isLoading) loadMore();
+  }, { rootMargin: '900px 0px' }); 
+  observer.observe(sentinelEl);
+}
+
+function stopObserving() {
+  if (observer) { observer.disconnect(); observer = null; }
 }
 
 // ---------- API calls ----------
@@ -382,7 +393,9 @@ async function fetchRecommendations(offset) {
     limit: PAGE_SIZE,
     offset: offset,
   });
-  if (currentContext && currentContext !== 'general') urlParams.set('context', currentContext);
+  // Always send the chosen context, including "general", so the backend
+  // uses it directly instead of falling back to time-based inference.
+  if (currentContext) urlParams.set('context', currentContext);
 
   let url;
   if (currentUserId) {
@@ -401,6 +414,26 @@ async function fetchRecommendations(offset) {
   return data;
 }
 
+function appendItems(items, startIdx) {
+  const cardsHtml = items.map((item, i) => cardHTML(item, startIdx + i)).join('');
+  resultsEl.insertAdjacentHTML('beforeend', cardsHtml);
+
+  const cards = resultsEl.querySelectorAll('.rec-card');
+  for (let i = startIdx; i < cards.length; i++) cards[i].classList.add('card-enter');
+
+  items.forEach(item => {
+    if (item.latitude && item.longitude) {
+      const m = L.marker([item.latitude, item.longitude], { icon: pinIcon('act', subtypeEmoji(item.subtype || item.type)) })
+        .bindPopup(buildMapPopup(item), { maxWidth: 260, className: 'hubby-popup' })
+        .addTo(map);
+      actMarkers.push(m);
+    }
+  });
+
+  attachCardHovers(startIdx);
+  allResults.push(...items);
+}
+
 async function loadMore() {
   if (isLoading || !hasMore) return;
   isLoading = true;
@@ -409,34 +442,15 @@ async function loadMore() {
   try {
     const data = await fetchRecommendations(currentOffset);
     const newItems = data.results || [];
+    if (typeof data.total === 'number') totalAvailable = data.total;
 
     if (newItems.length === 0) {
       hasMore = false;
     } else {
-      const startIdx = allResults.length;
-      const cardsHtml = newItems.map((item, i) => cardHTML(item, startIdx + i)).join('');
-      resultsEl.insertAdjacentHTML('beforeend', cardsHtml);
-
-      newItems.forEach(item => {
-        if (item.latitude && item.longitude) {
-          const m = L.marker([item.latitude, item.longitude], { icon: pinIcon('act', subtypeEmoji(item.subtype || item.type)) })
-            .bindPopup(buildMapPopup(item), { maxWidth: 260, className: 'hubby-popup' })
-            .addTo(map);
-          actMarkers.push(m);
-        }
-      });
-
-      attachCardHovers();
-      allResults.push(...newItems);
+      appendItems(newItems, allResults.length);
       currentOffset += PAGE_SIZE;
       hasMore = newItems.length === PAGE_SIZE;
-
-      metaEl.innerHTML = `
-        <div>Showing <span class="font-bold text-hubby-ink">${allResults.length}</span> recommendations
-          <span class="text-hubby-ink/40">·</span>
-          context: <span class="font-semibold text-hubby-orange">${currentContext}</span>
-        </div>
-        <div class="text-xs text-hubby-ink/50">radius ${currentRadius}km</div>`;
+      renderMeta();
     }
   } catch (err) {
     console.error(err);
@@ -445,32 +459,39 @@ async function loadMore() {
       <div class="font-semibold text-red-700">Failed to load: ${err.message}</div>
     </div>`;
   } finally {
-    isLoading = false;
-    hideLoading();
-    updateLoadMoreButton();
-    if (!hasMore) {
-      loadMoreContainer.innerHTML = '<div class="text-hubby-ink/50 text-sm py-4">✨ No more places to show ✨</div>';
-    }
+  hideLoading();
+  updateEndMarker();
+  isLoading = false;
+  if (!hasMore) {
+    stopObserving();
+  } else if (document.documentElement.scrollHeight <= window.innerHeight + 200) {
+    // Page still shorter than the viewport — fetch one more page to fill it.
+    loadMore();
   }
+}
 }
 
 async function initialSearch() {
   isLoading = false;
   hasMore = true;
   currentOffset = 0;
+  totalAvailable = 0;
   allResults = [];
   resultsEl.innerHTML = '';
   clearMarkers();
   metaEl.innerHTML = '';
   stateEl.innerHTML = '';
   popoverEl.classList.remove('visible');
-  loadMoreContainer.classList.add('hidden');
+  loaderEl.classList.add('hidden');
+  endEl.classList.add('hidden');
+  stopObserving();
 
   stateEl.innerHTML = `<div class="flex flex-col items-center gap-3 py-10"><div class="spinner"></div><div class="text-hubby-ink/70 font-medium">Loading recommendations…</div></div>`;
 
   try {
     const data = await fetchRecommendations(0);
     const items = data.results || [];
+    if (typeof data.total === 'number') totalAvailable = data.total;
 
     if (items.length === 0) {
       stateEl.innerHTML = `<div class="bg-orange-50/60 border border-orange-100 rounded-3xl p-8 text-center">
@@ -478,6 +499,7 @@ async function initialSearch() {
         <div class="font-display font-bold text-xl text-hubby-ink">No places open right now</div>
         <div class="text-hubby-ink/60 mt-1">Try a wider radius or a different context.</div>
       </div>`;
+      hasMore = false;
       return;
     }
 
@@ -492,31 +514,14 @@ async function initialSearch() {
       setTimeout(() => map.invalidateSize(), 50);
     }
 
-    const cardsHtml = items.map((r, idx) => cardHTML(r, idx)).join('');
-    resultsEl.insertAdjacentHTML('beforeend', cardsHtml);
-    items.forEach(r => {
-      if (r.latitude && r.longitude) {
-        const m = L.marker([r.latitude, r.longitude], { icon: pinIcon('act', subtypeEmoji(r.subtype || r.type)) })
-          .bindPopup(buildMapPopup(r), { maxWidth: 260, className: 'hubby-popup' })
-          .addTo(map);
-        actMarkers.push(m);
-      }
-    });
-    attachCardHovers();
-
-    allResults = items;
+    appendItems(items, 0);
     currentOffset = PAGE_SIZE;
     hasMore = items.length === PAGE_SIZE;
 
-    metaEl.innerHTML = `
-      <div>Showing <span class="font-bold text-hubby-ink">${items.length}</span> recommendations
-        <span class="text-hubby-ink/40">·</span>
-        context: <span class="font-semibold text-hubby-orange">${data.context}</span>
-      </div>
-      <div class="text-xs text-hubby-ink/50">radius ${data.radius_km}km</div>`;
+    renderMeta();
     stateEl.innerHTML = '';
-
-    updateLoadMoreButton();
+    updateEndMarker();
+    if (hasMore) startObserving();
   } catch (err) {
     console.error(err);
     stateEl.innerHTML = `<div class="bg-red-50 border border-red-200 rounded-3xl p-6 text-center">
@@ -575,7 +580,6 @@ async function fetchUserCoords(userId) {
 fGo.addEventListener('click', search);
 [fLat, fLon, fRadius].forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') search(); }));
 fCtx.addEventListener('change', search);
-loadMoreBtn.addEventListener('click', loadMore);
 
 fUser.addEventListener('input', () => {
   delete fUser.dataset.selectedId;
@@ -619,3 +623,6 @@ loadAllUsers().then(() => {
     bootstrap(FALLBACK.lat, FALLBACK.lon);
   }
 });
+
+function showLoading() { loaderEl.style.visibility = 'visible'; }
+function hideLoading() { loaderEl.style.visibility = 'hidden'; }

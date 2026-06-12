@@ -115,4 +115,5 @@ class RecommendationResponse(BaseModel):
     user_latitude: float
     user_longitude: float
     count: int
+    total: int      
     results: list[RecommendationItem]

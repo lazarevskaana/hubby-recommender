@@ -75,6 +75,13 @@
 
       .rec-card { transition: transform 0.25s ease, box-shadow 0.25s ease; position: relative; cursor: pointer; }
       .rec-card:hover { transform: translateY(-4px); box-shadow: 0 24px 50px -22px rgba(45,55,72,0.3); }
+
+      /* Fade + rise in newly appended cards so they don't pop abruptly */
+      @keyframes cardIn {
+        from { opacity: 0; transform: translateY(14px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      .rec-card.card-enter { animation: cardIn 0.4s ease both; }
       .rec-card h3 {
         display: -webkit-box;
         -webkit-line-clamp: 2;
@@ -122,20 +129,8 @@
 
       #search-section { position: relative; z-index: 10000; }
 
-      /* === ADDITIONS TO REMOVE GAP AFTER CARDS === */
-      #state:empty {
-        display: none;
-      }
-      #results {
-        margin-bottom: 0 !important;
-        padding-bottom: 0 !important;
-      }
-      #load-more-container {
-        margin-top: 12px !important;
-      }
-
-      @keyframes spin { to { transform: rotate(360deg); } }
-      .animate-spin { animation: spin 0.8s linear infinite; }
+      #state:empty { display: none; }
+      #results { margin-bottom: 0 !important; padding-bottom: 0 !important; }
 
       @media (max-width: 768px) {
         .search-row { flex-direction: column; }
@@ -238,18 +233,21 @@
         <div id="map" class="w-full h-72 md:h-96 shadow-card"></div>
       </section>
 
-      <!-- RESULTS GRID + LOAD MORE BUTTON -->
+      <!-- RESULTS GRID + INFINITE SCROLL -->
       <section id="results-section" class="mt-10">
         <div id="meta" class="flex items-center justify-between mb-5 text-sm text-hubby-ink/70 font-medium"></div>
         <div id="results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"></div>
-        <div id="load-more-container" class="text-center hidden">
-          <button id="load-more-btn" class="bg-hubby-orange hover:bg-orange-600 text-white font-semibold rounded-2xl px-8 py-4 flex items-center justify-center gap-2 shadow-float transition mx-auto">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Load more recommendations
-          </button>
+
+        <!-- Infinite scroll: loader shows while fetching, sentinel triggers the next page -->
+        <div id="infinite-loader" class="flex items-center justify-center gap-2 py-5 hidden">
+          <div class="spinner" style="width:24px;height:24px;border-width:3px;"></div>
+          <span class="text-sm text-hubby-ink/50">Loading more…</span>
         </div>
+        <div id="infinite-sentinel" class="h-8"></div>
+        <div id="infinite-end" class="text-center py-4 hidden text-hubby-ink/50 text-sm">
+          ✨ No more places to show ✨
+        </div>
+
         <div id="state" class="py-10"></div>
       </section>
     </main>

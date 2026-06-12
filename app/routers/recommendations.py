@@ -104,6 +104,7 @@ def build_recommendations(
         user_latitude=user_lat,
         user_longitude=user_lon,
         count=len(results),
+        total=len(scored),   
         results=results,
     )
 
